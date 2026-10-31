@@ -1,0 +1,905 @@
+null
+
+Logs:
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mathesis — Scientific Calculation Worksheet</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Theme Configuration -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-variant": "#33353b",
+            "tertiary-fixed": "#6dfe9c",
+            "on-secondary": "#131e8c",
+            "surface-container-high": "#282a30",
+            "tertiary": "#4de082",
+            "outline": "#8c919d",
+            "tertiary-fixed-dim": "#4de082",
+            "surface": "#111319",
+            "secondary-container": "#2f3aa3",
+            "error-container": "#93000a",
+            "outline-variant": "#424751",
+            "primary": "#a8c8ff",
+            "on-tertiary-fixed": "#00210c",
+            "secondary-fixed": "#e0e0ff",
+            "on-background": "#e2e2ea",
+            "surface-bright": "#373940",
+            "on-secondary-fixed": "#000767",
+            "surface-tint": "#a8c8ff",
+            "surface-container-low": "#191b22",
+            "on-primary-fixed": "#001b3c",
+            "on-error": "#690005",
+            "background": "#111319",
+            "surface-container-lowest": "#0c0e14",
+            "on-surface-variant": "#c2c6d3",
+            "on-tertiary-fixed-variant": "#005227",
+            "on-secondary-fixed-variant": "#2f3aa3",
+            "on-primary-fixed-variant": "#004689",
+            "on-primary": "#003061",
+            "on-tertiary": "#003919",
+            "surface-container-highest": "#33353b",
+            "primary-fixed": "#d5e3ff",
+            "surface-dim": "#111319",
+            "inverse-on-surface": "#2e3037",
+            "primary-fixed-dim": "#a8c8ff",
+            "inverse-surface": "#e2e2ea",
+            "on-primary-container": "#003c76",
+            "on-error-container": "#ffdad6",
+            "on-tertiary-container": "#004620",
+            "error": "#ffb4ab",
+            "secondary-fixed-dim": "#bdc2ff",
+            "primary-container": "#6ea8fe",
+            "on-secondary-container": "#a8afff",
+            "tertiary-container": "#1cbf65",
+            "surface-container": "#1d1f26",
+            "inverse-primary": "#115eaf",
+            "on-surface": "#e2e2ea",
+            "secondary": "#bdc2ff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "space-sm": "0.5rem",
+            "margin": "1.5rem",
+            "gutter": "1rem",
+            "space-lg": "1.25rem",
+            "space-md": "0.75rem",
+            "space-xs": "0.25rem",
+            "space-xl": "2rem"
+          },
+          "fontFamily": {
+            "math-inline": ["\"Source Serif 4\"", "serif"],
+            "label-md": ["JetBrains Mono", "monospace"],
+            "label-sm": ["JetBrains Mono", "monospace"],
+            "headline-lg": ["Inter", "sans-serif"],
+            "body-sm": ["Inter", "sans-serif"],
+            "headline-xl": ["Inter", "sans-serif"],
+            "math-display": ["\"Source Serif 4\"", "serif"],
+            "label-lg": ["JetBrains Mono", "monospace"],
+            "headline-md": ["Inter", "sans-serif"],
+            "body-lg": ["Inter", "sans-serif"],
+            "body-md": ["Inter", "sans-serif"]
+          },
+          "fontSize": {
+            "math-inline": ["0.9375rem", { "lineHeight": "1.4rem", "fontWeight": "400" }],
+            "label-md": ["0.75rem", { "lineHeight": "1rem", "letterSpacing": "0.02em", "fontWeight": "500" }],
+            "label-sm": ["0.6875rem", { "lineHeight": "0.875rem", "letterSpacing": "0.04em", "fontWeight": "500" }],
+            "headline-lg": ["1.375rem", { "lineHeight": "1.75rem", "letterSpacing": "-0.015em", "fontWeight": "600" }],
+            "body-sm": ["0.75rem", { "lineHeight": "1.25rem", "fontWeight": "400" }],
+            "headline-xl": ["1.75rem", { "lineHeight": "2.25rem", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "math-display": ["1.25rem", { "lineHeight": "1.75rem", "fontWeight": "400" }],
+            "label-lg": ["0.875rem", { "lineHeight": "1.25rem", "fontWeight": "500" }],
+            "headline-md": ["1.125rem", { "lineHeight": "1.5rem", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "body-lg": ["1rem", { "lineHeight": "1.6rem", "fontWeight": "400" }],
+            "body-md": ["0.875rem", { "lineHeight": "1.45rem", "fontWeight": "400" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 1.125rem;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    
+    /* Blinking Caret Simulation */
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    .math-caret {
+      animation: blink 1.05s infinite;
+      display: inline-block;
+      width: 2px;
+      height: 1.15rem;
+      background-color: #a8c8ff;
+      vertical-align: -2px;
+      margin-left: 2px;
+    }
+
+    /* Engine Status Glow Pulse */
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.2); opacity: 0.3; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .status-pulse {
+      animation: pulse-ring 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0c0e14;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #282a30;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #424751;
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface antialiased select-none overflow-hidden h-screen flex flex-col font-body-md text-body-md">
+<!-- ================= TOP APP BAR (Shared Components JSON Anchor) ================= -->
+<header class="bg-surface-container-low dark:bg-surface-container-low border-b border-outline-variant dark:border-outline-variant flat no shadows docked full-width top-0 h-12 flex justify-between items-center w-full px-4 z-40 shrink-0">
+<!-- Brand Wordmark & Document Meta -->
+<div class="flex items-center space-x-3">
+<div class="flex items-center space-x-2">
+<!-- Integral glyph brand mark -->
+<div class="w-7 h-7 rounded-lg bg-surface-container-high border border-outline-variant flex items-center justify-center text-primary shadow-inner">
+<span class="font-math-display text-math-display italic font-semibold leading-none pb-0.5">∫</span>
+</div>
+<span class="text-headline-md font-headline-md font-semibold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400">Mathesis</span>
+</div>
+<div class="h-4 w-[1px] bg-outline-variant mx-1"></div>
+<!-- Document Title Editable Chip -->
+<div class="flex items-center space-x-1.5 bg-surface-container-lowest px-2.5 py-1 rounded-lg border border-outline-variant hover:border-outline transition-colors group cursor-text">
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors text-base" data-icon="description">description</span>
+<span class="font-label-sm text-label-sm text-on-surface tracking-wide">Kinematics &amp; Harmonic_Oscillator.math</span>
+<span class="material-symbols-outlined text-tertiary text-xs ml-1" data-icon="cloud_done">cloud_done</span>
+</div>
+<!-- Engine Status Pill Badge -->
+<div class="flex items-center space-x-1.5 bg-surface-container-lowest border border-outline-variant px-2 py-0.5 rounded-full ml-1">
+<span class="relative flex h-2 w-2">
+<span class="status-pulse absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-tertiary shadow-[0_0_6px_#4de082]"></span>
+</span>
+<span class="font-label-sm text-label-sm text-tertiary font-medium tracking-wider lowercase">engine ready</span>
+</div>
+</div>
+<!-- Navigation Tabs Cluster -->
+<nav class="flex items-center space-x-6 h-full">
+<!-- Worksheet is Active as per Semantic Mapping (Worksheet Canvas view) -->
+<button class="text-primary dark:text-primary border-b-2 border-primary dark:border-primary font-medium py-3 text-label-md font-label-md h-full flex items-center space-x-1">
+<span>Worksheet</span>
+</button>
+<button class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface py-3 text-label-md font-label-md h-full flex items-center space-x-1 transition-colors">
+<span>Variables</span>
+<span class="text-[9px] bg-surface-container-high px-1 py-0.2 rounded text-outline font-label-sm">4</span>
+</button>
+<button class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface py-3 text-label-md font-label-md h-full flex items-center space-x-1 transition-colors">
+<span>Plots</span>
+</button>
+<button class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface py-3 text-label-md font-label-md h-full flex items-center space-x-1 transition-colors">
+<span>History</span>
+</button>
+</nav>
+<!-- Trailing Actions & Engine Controls -->
+<div class="flex items-center space-x-2">
+<!-- Insert Cell action -->
+<button class="flex items-center space-x-1.5 bg-surface-container-high hover:bg-surface-bright text-primary border border-outline-variant px-2.5 py-1 rounded-lg text-label-md font-label-md active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-sm font-semibold" data-icon="add">add</span>
+<span>Insert Block</span>
+</button>
+<!-- Trailing Secondary: Run All -->
+<button class="flex items-center space-x-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface border border-outline-variant px-2.5 py-1 rounded-lg text-label-md font-label-md active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-sm text-tertiary" data-icon="play_arrow">play_arrow</span>
+<span>Run All</span>
+</button>
+<!-- Trailing Primary: Export -->
+<button class="flex items-center space-x-1.5 bg-primary text-on-primary-fixed font-semibold px-3 py-1 rounded-lg text-label-md font-label-md hover:bg-primary-fixed active:scale-[0.98] transition-all shadow-sm">
+<span class="material-symbols-outlined text-sm" data-icon="file_download">file_download</span>
+<span>Export</span>
+</button>
+<div class="h-4 w-[1px] bg-outline-variant mx-0.5"></div>
+<!-- Trailing icon actions -->
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors active:scale-[0.98]" title="Tune Kernel Parameters">
+<span class="material-symbols-outlined" data-icon="tune">tune</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors active:scale-[0.98]" title="Split Layout / Workspace Quilt">
+<span class="material-symbols-outlined" data-icon="view_quilt">view_quilt</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors active:scale-[0.98]" title="Settings">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<!-- Profile Avatar -->
+<div class="w-6 h-6 rounded-full bg-secondary-container border border-outline-variant flex items-center justify-center text-secondary text-label-sm font-label-sm ml-1 ring-1 ring-outline-variant">
+<span>ψ</span>
+</div>
+</div>
+</header>
+<!-- ================= MAIN COMPUTATION WORKBENCH (Three-Pane Grid) ================= -->
+<main class="flex-1 flex overflow-hidden relative">
+<!-- ================= LEFT DOCKED DRAWER (Symbol Palette) ================= -->
+<aside class="bg-surface-container-lowest dark:bg-surface-container-lowest border-r border-outline-variant dark:border-outline-variant flat no shadows docked left-0 top-12 bottom-7 w-60 flex flex-col justify-between h-[calc(100vh-4.75rem)] p-2 z-30 shrink-0">
+<!-- Drawer Top: Header and Symbol Category Tabs -->
+<div class="flex flex-col space-y-2.5">
+<div class="flex items-center justify-between px-2 pt-1 pb-1 border-b border-outline-variant/60">
+<div>
+<div class="text-label-lg font-label-lg font-semibold text-on-surface flex items-center space-x-1.5">
+<span>Symbol Palette</span>
+<span class="text-[9px] uppercase px-1 py-0.2 rounded bg-surface-container-high text-primary font-label-sm">TeX</span>
+</div>
+<div class="text-[10px] font-label-sm text-outline">LaTeX &amp; Math Engine Ready</div>
+</div>
+<button class="text-outline hover:text-on-surface p-1 rounded hover:bg-surface-container-high transition-colors" title="Pin / Dock Sidebar">
+<span class="material-symbols-outlined text-sm" data-icon="push_pin">push_pin</span>
+</button>
+</div>
+<!-- 4 Tab Bar (from Shared Components JSON: Greek Alphabet, Calculus & Analysis, Algebra & Operators, Constants & Units) -->
+<div class="grid grid-cols-4 gap-1 p-0.5 bg-surface-container-low rounded-lg border border-outline-variant">
+<button class="bg-surface-container-high dark:bg-surface-container-high text-primary dark:text-primary font-medium rounded-lg px-1.5 py-1 text-label-sm font-label-sm text-center transition-colors truncate" title="Greek Alphabet">
+            Greek
+          </button>
+<button class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface rounded-lg px-1.5 py-1 text-label-sm font-label-sm text-center transition-colors truncate" title="Calculus &amp; Analysis">
+            Calc
+          </button>
+<button class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface rounded-lg px-1.5 py-1 text-label-sm font-label-sm text-center transition-colors truncate" title="Algebra &amp; Operators">
+            Algeb
+          </button>
+<button class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface rounded-lg px-1.5 py-1 text-label-sm font-label-sm text-center transition-colors truncate" title="Constants &amp; Units">
+            Const
+          </button>
+</div>
+<!-- Greek Characters Interactive Grid -->
+<div class="space-y-1.5 pt-1">
+<div class="flex items-center justify-between px-1">
+<span class="text-[10px] uppercase font-label-sm text-outline tracking-wider font-semibold">Greek Letters</span>
+<span class="text-[10px] font-label-sm text-outline-variant">Press \ + name</span>
+</div>
+<div class="grid grid-cols-5 gap-1">
+<!-- Greek matrix cells -->
+<button class="h-8 rounded bg-surface-container hover:bg-surface-container-high hover:border-primary/50 border border-outline-variant/60 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-all group relative active:scale-95" title="alpha (\alpha)">
+              α
+            </button>
+<button class="h-8 rounded bg-surface-container hover:bg-surface-container-high hover:border-primary/50 border border-outline-variant/60 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-all group relative active:scale-95" title="beta (\beta)">
+              β
+            </button>
+<button class="h-8 rounded bg-surface-container hover:bg-surface-container-high hover:border-primary/50 border border-outline-variant/60 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-all group relative active:scale-95" title="gamma (\gamma)">
+              γ
+            </button>
+<button class="h-8 rounded bg-surface-container hover:bg-surface-container-high hover:border-primary/50 border border-outline-variant/60 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-all group relative active:scale-95" title="delta (\delta)">
+              δ
+            </button>
+<button class="h-8 rounded bg-surface-container hover:bg-surface-container-high hover:border-primary/50 border border-outline-variant/60 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-all group relative active:scale-95" title="epsilon (\epsilon)">
+              ε
+            </button>
+<button class="h-8 rounded bg-surface-container hover:bg-surface-container-high hover:border-primary/50 border border-outline-variant/60 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-all group relative active:scale-95" title="theta (\theta)">
+              θ
+            </button>
+<button class="h-8 rounded bg-surface-container hover:bg-surface-container-high hover:border-primary/50 border border-outline-variant/60 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-all group relative active:scale-95" title="lambda (\lambda)">
+              λ
+            </button>
+<button class="h-8 rounded bg-surface-container hover:bg-surface-container-high hover:border-primary/50 border border-outline-variant/60 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-all group relative active:scale-95" title="mu (\mu)">
+              μ
+            </button>
+<button class="h-8 rounded bg-surface-container hover:bg-surface-container-high hover:border-primary/50 border border-outline-variant/60 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-all group relative active:scale-95" title="pi (\pi)">
+              π
+            </button>
+<button class="h-8 rounded bg-surface-container hover:bg-surface-container-high hover:border-primary/50 border border-outline-variant/60 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-all group relative active:scale-95" title="sigma (\sigma)">
+              σ
+            </button>
+<button class="h-8 rounded bg-surface-container hover:bg-surface-container-high hover:border-primary/50 border border-outline-variant/60 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-all group relative active:scale-95" title="phi (\phi)">
+              φ
+            </button>
+<button class="h-8 rounded bg-surface-container hover:bg-surface-container-high hover:border-primary/50 border border-outline-variant/60 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-all group relative active:scale-95" title="omega (\omega)">
+              ω
+            </button>
+<button class="h-8 rounded bg-surface-container hover:bg-surface-container-high hover:border-primary/50 border border-outline-variant/60 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-all group relative active:scale-95" title="Delta (\Delta)">
+              Δ
+            </button>
+<button class="h-8 rounded bg-surface-container hover:bg-surface-container-high hover:border-primary/50 border border-outline-variant/60 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-all group relative active:scale-95" title="Sigma (\Sigma)">
+              Σ
+            </button>
+<button class="h-8 rounded bg-surface-container hover:bg-surface-container-high hover:border-primary/50 border border-outline-variant/60 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-all group relative active:scale-95" title="Omega (\Omega)">
+              Ω
+            </button>
+</div>
+</div>
+<!-- Calculus & Operators Quick Palette Preview -->
+<div class="space-y-1.5 pt-2">
+<div class="flex items-center justify-between px-1">
+<span class="text-[10px] uppercase font-label-sm text-outline tracking-wider font-semibold">Calculus &amp; Operators</span>
+<span class="text-[10px] font-label-sm text-outline-variant">Quick Inserts</span>
+</div>
+<div class="grid grid-cols-4 gap-1">
+<button class="h-7 rounded bg-surface-container hover:bg-surface-container-high border border-outline-variant/50 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-colors text-xs" title="Integral with bounds">
+              ∫ dx
+            </button>
+<button class="h-7 rounded bg-surface-container hover:bg-surface-container-high border border-outline-variant/50 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-colors text-xs" title="Derivative">
+              d/dx
+            </button>
+<button class="h-7 rounded bg-surface-container hover:bg-surface-container-high border border-outline-variant/50 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-colors text-xs" title="Partial derivative">
+              ∂/∂t
+            </button>
+<button class="h-7 rounded bg-surface-container hover:bg-surface-container-high border border-outline-variant/50 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-colors text-xs" title="Square root">
+              √x
+            </button>
+<button class="h-7 rounded bg-surface-container hover:bg-surface-container-high border border-outline-variant/50 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-colors text-xs" title="Summation">
+              ∑
+            </button>
+<button class="h-7 rounded bg-surface-container hover:bg-surface-container-high border border-outline-variant/50 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-colors text-xs" title="Product">
+              ∏
+            </button>
+<button class="h-7 rounded bg-surface-container hover:bg-surface-container-high border border-outline-variant/50 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-colors text-xs" title="Infinity">
+              ∞
+            </button>
+<button class="h-7 rounded bg-surface-container hover:bg-surface-container-high border border-outline-variant/50 flex items-center justify-center font-math-inline text-math-inline text-on-surface hover:text-primary transition-colors text-xs" title="Approximate">
+              ≈
+            </button>
+</div>
+</div>
+<!-- 2D Structure Snippet Cards -->
+<div class="space-y-1.5 pt-2">
+<span class="text-[10px] uppercase font-label-sm text-outline tracking-wider font-semibold px-1">Structures</span>
+<div class="grid grid-cols-2 gap-1.5">
+<button class="p-1.5 rounded bg-surface-container hover:bg-surface-container-high border border-outline-variant flex items-center space-x-2 text-left hover:border-primary/50 transition-colors">
+<span class="font-math-inline text-math-inline text-primary">a/b</span>
+<span class="font-label-sm text-[10px] text-outline">Fraction</span>
+</button>
+<button class="p-1.5 rounded bg-surface-container hover:bg-surface-container-high border border-outline-variant flex items-center space-x-2 text-left hover:border-primary/50 transition-colors">
+<span class="font-math-inline text-math-inline text-primary">x<sup>n</sup></span>
+<span class="font-label-sm text-[10px] text-outline">Power</span>
+</button>
+<button class="p-1.5 rounded bg-surface-container hover:bg-surface-container-high border border-outline-variant flex items-center space-x-2 text-left hover:border-primary/50 transition-colors">
+<span class="font-math-inline text-math-inline text-primary">x<sub>i</sub></span>
+<span class="font-label-sm text-[10px] text-outline">Subscript</span>
+</button>
+<button class="p-1.5 rounded bg-surface-container hover:bg-surface-container-high border border-outline-variant flex items-center space-x-2 text-left hover:border-primary/50 transition-colors">
+<span class="font-math-inline text-math-inline text-primary">[ v ]</span>
+<span class="font-label-sm text-[10px] text-outline">Vector</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Drawer Footer (from Shared Components JSON: Docs, Shortcuts) -->
+<div class="border-t border-outline-variant/60 pt-2 flex items-center justify-between text-on-surface-variant px-1">
+<button class="flex items-center space-x-1.5 text-label-sm font-label-sm hover:text-on-surface transition-colors py-1">
+<span class="material-symbols-outlined text-sm" data-icon="menu_book">menu_book</span>
+<span>Docs</span>
+</button>
+<button class="flex items-center space-x-1.5 text-label-sm font-label-sm hover:text-on-surface transition-colors py-1">
+<span class="material-symbols-outlined text-sm" data-icon="keyboard">keyboard</span>
+<span>Shortcuts</span>
+</button>
+</div>
+</aside>
+<!-- ================= CENTRAL WORKSHEET CANVAS (Notion / MathCAD Document Architecture) ================= -->
+<section class="flex-1 bg-surface overflow-y-auto overflow-x-hidden p-6 flex flex-col items-center">
+<!-- Max-width 960px bounded document canvas -->
+<div class="w-full max-w-[960px] flex flex-col space-y-4 pb-16">
+<!-- Floating Document Canvas Notion-style Header -->
+<div class="pb-3 border-b border-outline-variant/60">
+<div class="flex items-center justify-between text-label-sm font-label-sm text-outline mb-1.5">
+<div class="flex items-center space-x-3">
+<span class="flex items-center space-x-1 text-primary">
+<span class="material-symbols-outlined text-xs" data-icon="folder_open">folder_open</span>
+<span>Mechanics / Classical Oscillations</span>
+</span>
+<span>•</span>
+<span>Dr. Eleanor Vance</span>
+<span>•</span>
+<span>Updated 3m ago</span>
+</div>
+<div class="flex items-center space-x-2 bg-surface-container px-2 py-0.5 rounded border border-outline-variant text-[11px]">
+<span class="text-tertiary">SI Metric</span>
+<span class="text-outline-variant">|</span>
+<span class="text-on-surface-variant">Precision: Radians (64-bit)</span>
+</div>
+</div>
+<h1 class="text-headline-xl font-headline-xl text-on-surface tracking-tight font-semibold flex items-center justify-between">
+<span>Damped Harmonic Oscillator Simulation</span>
+<span class="text-label-sm font-label-sm font-normal text-outline bg-surface-container-high px-2 py-1 rounded border border-outline-variant">
+              Section 02.4
+            </span>
+</h1>
+<p class="text-body-sm font-body-sm text-on-surface-variant mt-1 max-w-3xl">
+            Mathematical scratchpad solving second-order linear differential equations for viscously damped single-degree-of-freedom mass-spring systems under free and forced excitations.
+          </p>
+</div>
+<!-- ================= WORKSHEET CALCULATION CELLS STACK ================= -->
+<div class="flex flex-col space-y-2.5">
+<!-- CELL 1: Variable Definition (m = 2.50 kg) -->
+<div class="group bg-surface-container rounded-lg border border-outline-variant hover:border-outline/60 transition-all flex items-stretch overflow-hidden">
+<!-- Cell Execution Index Gutter -->
+<div class="w-10 bg-surface-container-low border-r border-outline-variant/60 flex items-center justify-center font-label-sm text-label-sm text-outline select-none shrink-0 group-hover:text-primary transition-colors">
+              [1]
+            </div>
+<!-- Cell Content Area -->
+<div class="flex-1 p-3 flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<span class="font-math-display text-math-display text-primary italic font-semibold">m</span>
+<span class="font-math-display text-math-display text-outline-variant">:=</span>
+<div class="flex items-center space-x-1.5 bg-surface-container-lowest px-2 py-1 rounded border border-outline-variant/80">
+<span class="font-label-md text-label-md text-on-surface font-medium">2.50</span>
+<span class="font-label-sm text-label-sm text-tertiary px-1 rounded bg-tertiary/10 border border-tertiary/20">kg</span>
+</div>
+<span class="text-body-sm font-body-sm text-outline italic ml-2"># Mass of the resonant body</span>
+</div>
+<!-- Right Live Echo Result -->
+<div class="flex items-center space-x-2 text-right">
+<span class="font-label-sm text-label-sm text-outline-variant">live echo</span>
+<span class="font-label-md text-label-md text-outline font-medium px-2 py-0.5 rounded bg-surface-container-low border border-outline-variant/50">2.50 kg</span>
+</div>
+</div>
+</div>
+<!-- CELL 2: Spring Constant & Damping Parameters (k & c) -->
+<div class="group bg-surface-container rounded-lg border border-outline-variant hover:border-outline/60 transition-all flex items-stretch overflow-hidden">
+<div class="w-10 bg-surface-container-low border-r border-outline-variant/60 flex items-center justify-center font-label-sm text-label-sm text-outline select-none shrink-0 group-hover:text-primary transition-colors">
+              [2]
+            </div>
+<div class="flex-1 p-3 flex items-center justify-between">
+<div class="flex items-center space-x-5">
+<!-- k parameter -->
+<div class="flex items-center space-x-2">
+<span class="font-math-display text-math-display text-primary italic font-semibold">k</span>
+<span class="font-math-display text-math-display text-outline-variant">:=</span>
+<div class="flex items-center space-x-1.5 bg-surface-container-lowest px-2 py-1 rounded border border-outline-variant/80">
+<span class="font-label-md text-label-md text-on-surface font-medium">180.0</span>
+<span class="font-label-sm text-label-sm text-tertiary px-1 rounded bg-tertiary/10 border border-tertiary/20">N/m</span>
+</div>
+</div>
+<div class="h-4 w-[1px] bg-outline-variant"></div>
+<!-- c parameter -->
+<div class="flex items-center space-x-2">
+<span class="font-math-display text-math-display text-primary italic font-semibold">c</span>
+<span class="font-math-display text-math-display text-outline-variant">:=</span>
+<div class="flex items-center space-x-1.5 bg-surface-container-lowest px-2 py-1 rounded border border-outline-variant/80">
+<span class="font-label-md text-label-md text-on-surface font-medium">1.25</span>
+<span class="font-label-sm text-label-sm text-tertiary px-1 rounded bg-tertiary/10 border border-tertiary/20">N·s/m</span>
+</div>
+</div>
+</div>
+<!-- Right Diagnostics Telemetry -->
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-tertiary text-xs" data-icon="check_circle">check_circle</span>
+<span class="font-label-sm text-label-sm text-outline">Evaluated in 0.4ms</span>
+</div>
+</div>
+</div>
+<!-- CELL 3: Angular Frequency (2D Fraction + Radical Notation) -->
+<div class="group bg-surface-container rounded-lg border border-outline-variant hover:border-outline/60 transition-all flex items-stretch overflow-hidden">
+<div class="w-10 bg-surface-container-low border-r border-outline-variant/60 flex items-center justify-center font-label-sm text-label-sm text-outline select-none shrink-0 group-hover:text-primary transition-colors">
+              [3]
+            </div>
+<div class="flex-1 p-3.5 flex items-center justify-between">
+<!-- Rich 2D Math Equation: omega_0 = sqrt(k / m) -->
+<div class="flex items-center space-x-3">
+<div class="flex items-baseline space-x-0.5">
+<span class="font-math-display text-math-display text-primary italic font-semibold text-lg">ω</span>
+<span class="font-label-sm text-label-sm text-primary">0</span>
+</div>
+<span class="font-math-display text-math-display text-outline-variant text-base">=</span>
+<!-- 2D Radical with Fraction radicand -->
+<div class="flex items-center font-math-display text-math-display text-on-surface">
+<span class="text-xl font-light text-primary mr-0.5">√</span>
+<div class="border-t-2 border-primary/80 pt-0.5 px-2 flex flex-col items-center">
+<span class="text-sm italic font-semibold text-primary">k</span>
+<div class="w-full h-[1.5px] bg-on-surface-variant my-0.5"></div>
+<span class="text-sm italic font-semibold text-primary">m</span>
+</div>
+</div>
+<span class="font-math-display text-math-display text-outline-variant text-base ml-2">=</span>
+</div>
+<!-- Right Live Result: 8.4853 rad/s in glowing blue pill -->
+<div class="flex items-center space-x-3">
+<div class="flex items-center space-x-1.5 bg-primary/10 border border-primary/30 px-3 py-1.5 rounded-lg shadow-[0_0_12px_rgba(110,168,254,0.12)]">
+<span class="font-label-md text-label-md text-primary font-semibold tracking-wide">8.4853</span>
+<span class="font-label-sm text-label-sm text-primary/80 font-normal">rad/s</span>
+</div>
+<button class="opacity-0 group-hover:opacity-100 text-outline hover:text-on-surface transition-opacity p-1" title="Copy result">
+<span class="material-symbols-outlined text-sm" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+</div>
+</div>
+<!-- CELL 4: Damping Ratio (zeta = c / (2 * sqrt(m * k))) -->
+<div class="group bg-surface-container rounded-lg border border-outline-variant hover:border-outline/60 transition-all flex items-stretch overflow-hidden">
+<div class="w-10 bg-surface-container-low border-r border-outline-variant/60 flex items-center justify-center font-label-sm text-label-sm text-outline select-none shrink-0 group-hover:text-primary transition-colors">
+              [4]
+            </div>
+<div class="flex-1 p-3.5 flex items-center justify-between">
+<!-- 2D Math formula -->
+<div class="flex items-center space-x-3">
+<span class="font-math-display text-math-display text-primary italic font-semibold text-lg">ζ</span>
+<span class="font-math-display text-math-display text-outline-variant text-base">=</span>
+<!-- 2D Fraction block -->
+<div class="flex flex-col items-center font-math-display text-math-display">
+<span class="text-sm italic font-semibold text-primary pb-0.5">c</span>
+<div class="w-full h-[1.5px] bg-on-surface-variant my-0.5"></div>
+<div class="flex items-center space-x-1 pt-0.5">
+<span class="text-sm font-label-md">2</span>
+<span class="text-xs text-outline">·</span>
+<span class="text-base font-light text-primary">√</span>
+<div class="border-t border-primary/80 pt-0.5 px-1 flex items-center space-x-1">
+<span class="text-xs italic text-primary">m</span>
+<span class="text-[10px] text-outline">·</span>
+<span class="text-xs italic text-primary">k</span>
+</div>
+</div>
+</div>
+<span class="font-math-display text-math-display text-outline-variant text-base ml-2">=</span>
+</div>
+<!-- Right live result + regime notice badge -->
+<div class="flex items-center space-x-3">
+<div class="flex items-center space-x-2">
+<span class="font-label-md text-label-md text-on-surface font-semibold bg-surface-container-lowest px-2.5 py-1 rounded border border-outline-variant">
+                    0.02946
+                  </span>
+<!-- Underdamped Regime Notice Badge -->
+<div class="flex items-center space-x-1 px-2 py-0.5 rounded bg-tertiary/10 border border-tertiary/30 text-tertiary text-label-sm font-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+<span>Underdamped (ζ &lt; 1)</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- CELL 5: Definite Integral Expression (Total System Energy) -->
+<div class="group bg-surface-container rounded-lg border border-outline-variant hover:border-outline/60 transition-all flex items-stretch overflow-hidden">
+<div class="w-10 bg-surface-container-low border-r border-outline-variant/60 flex items-center justify-center font-label-sm text-label-sm text-outline select-none shrink-0 group-hover:text-primary transition-colors">
+              [5]
+            </div>
+<div class="flex-1 p-3.5 flex items-center justify-between">
+<!-- 2D Calculus Typesetting with upper/lower limits -->
+<div class="flex items-center space-x-3">
+<div class="flex items-baseline space-x-0.5">
+<span class="font-math-display text-math-display text-primary italic font-semibold">E</span>
+<span class="font-label-sm text-label-sm text-outline">total</span>
+</div>
+<span class="font-math-display text-math-display text-outline-variant">=</span>
+<!-- Integral Glyph with Bounds -->
+<div class="flex items-center space-x-1">
+<div class="relative flex items-center justify-center font-math-display text-math-display text-primary text-2xl h-10 w-4">
+<span class="italic font-light select-none">∫</span>
+<span class="absolute -top-1 right-0 text-[10px] font-label-sm text-outline">T</span>
+<span class="absolute -bottom-1 right-0 text-[10px] font-label-sm text-outline">0</span>
+</div>
+<!-- Integrand in parentheses -->
+<div class="flex items-center space-x-1.5 pl-2 font-math-display text-math-display text-on-surface">
+<span class="text-xl font-light text-outline">(</span>
+<!-- Term 1: 1/2 m v(t)^2 -->
+<div class="flex items-center space-x-1">
+<div class="flex flex-col items-center text-xs">
+<span>1</span>
+<div class="w-2.5 h-[1px] bg-on-surface-variant"></div>
+<span>2</span>
+</div>
+<span class="text-xs text-outline">·</span>
+<span class="italic text-primary text-sm">m</span>
+<span class="text-xs text-outline">·</span>
+<span class="italic text-sm">v(t)<sup>2</sup></span>
+</div>
+<span class="text-outline text-sm">+</span>
+<!-- Term 2: 1/2 k x(t)^2 -->
+<div class="flex items-center space-x-1">
+<div class="flex flex-col items-center text-xs">
+<span>1</span>
+<div class="w-2.5 h-[1px] bg-on-surface-variant"></div>
+<span>2</span>
+</div>
+<span class="text-xs text-outline">·</span>
+<span class="italic text-primary text-sm">k</span>
+<span class="text-xs text-outline">·</span>
+<span class="italic text-sm">x(t)<sup>2</sup></span>
+</div>
+<span class="text-xl font-light text-outline">)</span>
+<span class="italic font-math-inline text-math-inline text-primary pl-1 font-medium">dt</span>
+</div>
+</div>
+<span class="font-math-display text-math-display text-outline-variant ml-1">=</span>
+</div>
+<!-- Right live result -->
+<div class="flex items-center space-x-2">
+<span class="font-label-md text-label-md text-on-surface font-semibold bg-surface-container-lowest px-3 py-1 rounded border border-outline-variant">
+                  14.280 Joules
+                </span>
+<span class="font-label-sm text-label-sm text-outline">@ T=2.5s</span>
+</div>
+</div>
+</div>
+<!-- CELL 6: Warning & Domain Verification Demonstration -->
+<div class="group bg-surface-container rounded-lg border border-outline-variant hover:border-outline/60 transition-all flex items-stretch overflow-hidden">
+<div class="w-10 bg-surface-container-low border-r border-outline-variant/60 flex items-center justify-center font-label-sm text-label-sm text-outline select-none shrink-0 group-hover:text-primary transition-colors">
+              [6]
+            </div>
+<div class="flex-1 p-3.5 flex items-center justify-between">
+<!-- Left side math expression -->
+<div class="flex items-center space-x-3">
+<span class="font-label-md text-label-md text-primary font-medium">resonant_peak</span>
+<span class="font-math-display text-math-display text-outline-variant">=</span>
+<!-- Formula 1 / (2 * zeta * sqrt(1 - 2 zeta^2)) -->
+<div class="flex flex-col items-center font-math-display text-math-display">
+<span class="text-xs font-label-md text-on-surface">1</span>
+<div class="w-full h-[1.5px] bg-on-surface-variant my-0.5"></div>
+<div class="flex items-center space-x-1 text-xs">
+<span>2</span>
+<span class="text-outline">·</span>
+<span class="italic text-primary font-semibold">ζ</span>
+<span class="text-outline">·</span>
+<span class="font-light text-primary text-sm">√</span>
+<div class="border-t border-primary/80 pt-0.5 px-0.5">
+<span>1 - 2ζ<sup>2</sup></span>
+</div>
+</div>
+</div>
+<span class="font-math-display text-math-display text-outline-variant">=</span>
+<span class="font-label-md text-label-md text-on-surface font-medium">16.982</span>
+</div>
+<!-- Warning Flag & Tooltip Pill -->
+<div class="flex items-center space-x-2">
+<div class="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-error-container/30 border border-error/40 text-error text-label-sm font-label-sm">
+<span class="material-symbols-outlined text-xs" data-icon="warning">warning</span>
+<span>Domain verified: valid for ζ &lt; 1/√2 (0.707)</span>
+</div>
+</div>
+</div>
+</div>
+<!-- CELL 7: ACTIVE / EDITING INPUT CELL (Glow Focus, Caret, & Autocomplete Popup) -->
+<div class="relative bg-surface-container rounded-lg border-2 border-primary shadow-[0_0_0_1px_#6ea8fe,0_4px_16px_rgba(110,168,254,0.15)] flex items-stretch">
+<!-- Left illuminated gutter accent -->
+<div class="w-10 bg-surface-container-high border-r border-primary/40 flex items-center justify-center font-label-sm text-label-sm text-primary font-semibold select-none shrink-0 relative">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+              [7]
+            </div>
+<!-- Active Math Input Canvas -->
+<div class="flex-1 p-3.5 flex flex-col justify-center">
+<div class="flex items-center space-x-2 font-math-display text-math-display text-lg">
+<!-- x(t) = A * e^(-zeta omega_0 t) * cos(omega_d t + phi) -->
+<span class="italic text-primary font-semibold">x(t)</span>
+<span class="text-outline-variant">=</span>
+<span class="italic text-on-surface">A</span>
+<span class="text-outline text-xs">·</span>
+<span class="italic text-on-surface">e</span><sup class="text-xs font-label-sm text-primary -top-2">-ζ ω<sub>0</sub> t</sup>
+<span class="text-outline text-xs">·</span>
+<span class="font-math-inline text-base text-on-surface">cos</span>
+<span class="text-outline text-sm">(</span>
+<span class="italic text-primary font-semibold">ω</span><sub class="text-[10px] text-primary">d</sub>
+<span class="text-on-surface text-sm">t</span>
+<span class="text-outline text-sm">+</span>
+<span class="italic text-primary font-semibold">φ</span>
+<span class="text-outline text-sm">)</span>
+<!-- Blinking Caret -->
+<span class="math-caret"></span>
+</div>
+<!-- Contextual helper subtext -->
+<div class="mt-2 pt-2 border-t border-outline-variant/40 flex items-center justify-between text-label-sm font-label-sm text-outline">
+<div class="flex items-center space-x-2">
+<span class="text-primary font-medium">Type expression</span>
+<span>•</span>
+<span>Press <kbd class="px-1 py-0.5 bg-surface-container-high rounded border border-outline-variant text-on-surface font-label-sm">Enter</kbd> to evaluate</span>
+<span>•</span>
+<span><kbd class="px-1 py-0.5 bg-surface-container-high rounded border border-outline-variant text-on-surface font-label-sm">Tab</kbd> to accept suggestion</span>
+</div>
+<div class="text-outline-variant text-[11px]">LaTeX: \cos(\omega_d t + \varphi)</div>
+</div>
+</div>
+<!-- Autocomplete Floating Context Flyout (Level 3 Elevation) -->
+<div class="absolute left-48 top-12 z-50 w-64 bg-[#222632] border border-[#3b4255] rounded-lg shadow-[0_8px_24px_rgba(0,0,0,0.55)] p-1.5 flex flex-col space-y-1">
+<div class="px-2 py-1 text-[10px] font-label-sm text-outline uppercase tracking-wider flex items-center justify-between">
+<span>Variables &amp; Constants</span>
+<span>4 matches</span>
+</div>
+<div class="bg-surface-container-high text-primary px-2.5 py-1.5 rounded flex items-center justify-between cursor-pointer border border-primary/30">
+<div class="flex items-center space-x-2">
+<span class="font-math-inline text-math-inline font-semibold">ω_d</span>
+<span class="text-body-sm font-body-sm text-on-surface">Damped natural frequency</span>
+</div>
+<span class="font-label-sm text-[10px] text-tertiary">8.481 rad/s</span>
+</div>
+<div class="hover:bg-surface-container px-2.5 py-1.5 rounded flex items-center justify-between text-on-surface-variant hover:text-on-surface cursor-pointer transition-colors">
+<div class="flex items-center space-x-2">
+<span class="font-math-inline text-math-inline font-semibold">ω_0</span>
+<span class="text-body-sm font-body-sm text-outline">Undamped natural frequency</span>
+</div>
+<span class="font-label-sm text-[10px] text-outline">8.485 rad/s</span>
+</div>
+<div class="hover:bg-surface-container px-2.5 py-1.5 rounded flex items-center justify-between text-on-surface-variant hover:text-on-surface cursor-pointer transition-colors">
+<div class="flex items-center space-x-2">
+<span class="font-math-inline text-math-inline font-semibold">φ</span>
+<span class="text-body-sm font-body-sm text-outline">Initial phase angle</span>
+</div>
+<span class="font-label-sm text-[10px] text-outline">0.00 rad</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Add Cell Action Button (Worksheet Bottom) -->
+<div class="pt-2 flex justify-center">
+<button class="flex items-center space-x-2 px-4 py-2 rounded-lg bg-surface-container border border-dashed border-outline-variant hover:border-primary text-outline hover:text-primary transition-all active:scale-[0.98] group">
+<span class="material-symbols-outlined text-sm group-hover:rotate-90 transition-transform" data-icon="add">add</span>
+<span class="text-label-md font-label-md">+ Add formula, matrix, or markdown block</span>
+</button>
+</div>
+</div>
+</section>
+<!-- ================= RIGHT AUXILIARY INSPECTOR / PLOT DRAWER (320px Fixed) ================= -->
+<aside class="w-80 bg-surface-container-lowest border-l border-outline-variant h-[calc(100vh-4.75rem)] flex flex-col justify-between shrink-0 overflow-y-auto">
+<div class="p-3 space-y-3.5">
+<!-- Inspector Title -->
+<div class="flex items-center justify-between border-b border-outline-variant/60 pb-2">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-primary text-base" data-icon="query_stats">query_stats</span>
+<span class="text-label-md font-label-md font-semibold text-on-surface">Interactive Phase Plot</span>
+</div>
+<span class="text-[10px] font-label-sm text-tertiary bg-tertiary/10 border border-tertiary/30 px-1.5 py-0.5 rounded">Live Vector</span>
+</div>
+<!-- Parametric Plot Preview Screen -->
+<div class="bg-surface-container rounded-lg border border-outline-variant p-2.5 flex flex-col space-y-2">
+<div class="flex items-center justify-between text-[11px] font-label-sm text-outline">
+<span>x(t) vs t [Transient Decay]</span>
+<span class="text-primary font-medium">t ∈ [0, 4π]</span>
+</div>
+<!-- Stylized Math SVG Curve Visualization -->
+<div class="h-32 w-full bg-surface-container-lowest rounded border border-outline-variant/80 relative overflow-hidden flex items-center justify-center">
+<!-- Grid lines -->
+<div class="absolute inset-0 grid grid-cols-6 grid-rows-4 divide-x divide-y divide-outline-variant/20 pointer-events-none">
+<div></div><div></div><div></div><div></div><div></div><div></div>
+<div></div><div></div><div></div><div></div><div></div><div></div>
+<div></div><div></div><div></div><div></div><div></div><div></div>
+<div></div><div></div><div></div><div></div><div></div><div></div>
+</div>
+<!-- Axis center lines -->
+<div class="absolute top-1/2 left-0 right-0 h-[1px] bg-outline-variant/60 pointer-events-none"></div>
+<div class="absolute top-0 bottom-0 left-6 w-[1px] bg-outline-variant/60 pointer-events-none"></div>
+<!-- Mathematical Damped Oscillation Waveform Curve -->
+<svg class="w-full h-full p-1" fill="none" viewbox="0 0 280 120" xmlns="http://www.w3.org/2000/svg">
+<!-- Upper decay envelope -->
+<path d="M 24 20 Q 80 32, 140 45 T 270 58" opacity="0.6" stroke="#4de082" stroke-dasharray="2 3" stroke-width="1.2"></path>
+<!-- Lower decay envelope -->
+<path d="M 24 100 Q 80 88, 140 75 T 270 62" opacity="0.6" stroke="#4de082" stroke-dasharray="2 3" stroke-width="1.2"></path>
+<!-- Damped sine wave -->
+<path d="M 24 60 C 35 18, 50 18, 62 60 C 74 102, 90 98, 102 60 C 114 28, 130 32, 142 60 C 154 85, 170 82, 182 60 C 194 42, 210 44, 222 60 C 234 72, 250 70, 262 60 L 275 60" stroke="#6ea8fe" stroke-linecap="round" stroke-width="2"></path>
+<!-- Highlighted current time cursor point -->
+<circle cx="102" cy="60" fill="#6ea8fe" r="3.5" stroke="#e2e8f0" stroke-width="1.5"></circle>
+</svg>
+<!-- Coordinate read-out pin -->
+<div class="absolute top-2 right-2 text-[10px] font-label-sm text-primary bg-surface-container-high/90 px-1.5 py-0.5 rounded border border-outline-variant">
+              t=1.42s | x=0.00
+            </div>
+</div>
+<div class="flex items-center justify-between text-label-sm font-label-sm text-outline pt-0.5">
+<span>Sampling: 1000 pts</span>
+<span class="text-tertiary">FFT Real-time</span>
+</div>
+</div>
+<!-- Parametric Interactive Sliders -->
+<div class="space-y-2.5 bg-surface-container rounded-lg border border-outline-variant p-2.5">
+<div class="text-[10px] uppercase font-label-sm text-outline tracking-wider font-semibold">Tuning Variables</div>
+<!-- Slider 1: Damping c -->
+<div class="space-y-1">
+<div class="flex justify-between text-[11px] font-label-sm">
+<span class="text-on-surface">c (Damping constant)</span>
+<span class="text-primary font-medium">1.25 N·s/m</span>
+</div>
+<div class="relative w-full h-2 bg-surface-container-lowest rounded-full border border-outline-variant flex items-center">
+<div class="h-1.5 bg-primary rounded-full" style="width: 32%"></div>
+<div class="w-3 h-3 bg-on-surface rounded-full shadow border border-primary absolute" style="left: 30%"></div>
+</div>
+</div>
+<!-- Slider 2: Initial displacement x_0 -->
+<div class="space-y-1">
+<div class="flex justify-between text-[11px] font-label-sm">
+<span class="text-on-surface">x₀ (Displacement)</span>
+<span class="text-primary font-medium">0.080 m</span>
+</div>
+<div class="relative w-full h-2 bg-surface-container-lowest rounded-full border border-outline-variant flex items-center">
+<div class="h-1.5 bg-primary rounded-full" style="width: 60%"></div>
+<div class="w-3 h-3 bg-on-surface rounded-full shadow border border-primary absolute" style="left: 58%"></div>
+</div>
+</div>
+</div>
+<!-- Registered Symbols in Scope Table -->
+<div class="space-y-1.5">
+<span class="text-[10px] uppercase font-label-sm text-outline tracking-wider font-semibold">Scope Symbols</span>
+<div class="border border-outline-variant rounded-lg overflow-hidden">
+<table class="w-full text-left font-label-sm text-label-sm">
+<thead class="bg-surface-container-high text-outline text-[10px] uppercase border-b border-outline-variant">
+<tr>
+<th class="py-1 px-2">Symbol</th>
+<th class="py-1 px-2">Value</th>
+<th class="py-1 px-2">Dim</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/40 bg-surface-container-low text-on-surface">
+<tr class="hover:bg-surface-container">
+<td class="py-1 px-2 font-math-inline text-primary">m</td>
+<td class="py-1 px-2 text-right">2.50</td>
+<td class="py-1 px-2 text-outline">[M]</td>
+</tr>
+<tr class="hover:bg-surface-container">
+<td class="py-1 px-2 font-math-inline text-primary">k</td>
+<td class="py-1 px-2 text-right">180.0</td>
+<td class="py-1 px-2 text-outline">[MT⁻²]</td>
+</tr>
+<tr class="hover:bg-surface-container">
+<td class="py-1 px-2 font-math-inline text-primary">c</td>
+<td class="py-1 px-2 text-right">1.25</td>
+<td class="py-1 px-2 text-outline">[MT⁻¹]</td>
+</tr>
+<tr class="hover:bg-surface-container">
+<td class="py-1 px-2 font-math-inline text-primary">ω_0</td>
+<td class="py-1 px-2 text-right">8.4853</td>
+<td class="py-1 px-2 text-outline">[T⁻¹]</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Quick Export drawer trigger -->
+<div class="p-2.5 border-t border-outline-variant/60 bg-surface-container-low flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-outline">Render: SVG MathJax</span>
+<button class="px-2 py-1 rounded bg-surface-container hover:bg-surface-container-high border border-outline-variant text-label-sm font-label-sm text-primary flex items-center space-x-1">
+<span class="material-symbols-outlined text-xs" data-icon="fullscreen">fullscreen</span>
+<span>Expand Plot</span>
+</button>
+</div>
+</aside>
+</main>
+<!-- ================= STATUS BAR / FOOTER (Shared Components JSON Anchor) ================= -->
+<footer class="bg-surface-container-lowest dark:bg-surface-container-lowest border-t border-outline-variant dark:border-outline-variant flat no shadows fixed bottom-0 left-0 w-full h-7 px-3 flex items-center justify-between z-50 text-label-sm font-label-sm text-on-surface-variant dark:text-on-surface-variant cursor-pointer select-none">
+<!-- Left Status Telemetry (from Shared Components JSON: Kernel: v4.2.1-wasm • 64-bit Float • Memory: 42.8 MB • Precision: RAD) -->
+<div class="flex items-center space-x-2 text-tertiary dark:text-tertiary">
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+<span class="hover:text-on-surface transition-colors">Kernel: v4.2.1-wasm • 64-bit Float • Memory: 42.8 MB • Precision: RAD</span>
+</div>
+<!-- Center Keyboard Command Hints -->
+<div class="hidden md:flex items-center space-x-3 text-outline">
+<span><kbd class="text-on-surface">↵</kbd> Evaluate</span>
+<span>•</span>
+<span><kbd class="text-on-surface">/</kbd> Fractions</span>
+<span>•</span>
+<span><kbd class="text-on-surface">^</kbd> Exponent</span>
+<span>•</span>
+<span><kbd class="text-on-surface">\</kbd> Greek</span>
+<span>•</span>
+<span><kbd class="text-on-surface">⌘K</kbd> Palette</span>
+</div>
+<!-- Right Links / Performance Metric (from Shared Components JSON: Engine Ready, Diagnostics, Shortcuts (⌘K)) -->
+<div class="flex items-center space-x-4">
+<span class="text-tertiary dark:text-tertiary font-medium hover:text-on-surface transition-colors">Engine Ready</span>
+<span class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface transition-colors">Diagnostics</span>
+<span class="text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface transition-colors">Shortcuts (⌘K)</span>
+<span class="text-primary font-medium pl-1 border-l border-outline-variant">Solve: 1.2 ms</span>
+</div>
+</footer>
+</body></html>

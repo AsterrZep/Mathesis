@@ -8,6 +8,7 @@
 |---|---|---|---|
 | **context7** | remote (`https://mcp.context7.com/mcp`) | ✅ **Conectado y probado** | Docs actualizadas de Tauri/Symbolics/React en contexto del agente. Resolvió `/tauri-apps/tauri-docs` al instante |
 | **github** | local (`npx @modelcontextprotocol/server-github`) | ⚠️ Configurado — **requiere exportar `GITHUB_TOKEN`** | Gestionar issues, PRs, releases del repo Mathesis |
+| **stitch** | remote (`https://stitch.googleapis.com/mcp`, API key propia) | ✅ **Conectado y usado** (16 tools) | Diseño UI generado: proyecto `projects/10423414734086294375` → mockup del worksheet en `Documentacion/07-diseno/` (ver 07-diseno/README.md) |
 
 ### ⚠️ Pendiente: token de GitHub
 
