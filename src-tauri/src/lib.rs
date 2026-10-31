@@ -38,6 +38,29 @@ async fn eval_document(
         .await
 }
 
+/// Muestrea una expresión (x libre) para el gráfico del inspector (uPlot).
+/// Frontend: invoke("plot_data", { ast, xFrom, xTo, steps, varName, env })
+#[tauri::command]
+async fn plot_data(
+    engine: tauri::State<'_, engine::Engine>,
+    ast: Value,
+    x_from: f64,
+    x_to: f64,
+    steps: u32,
+    var_name: String,
+    env: Value,
+) -> Result<Value, String> {
+    engine
+        .call(
+            "plot_data",
+            serde_json::json!({
+                "ast": ast, "xFrom": x_from, "xTo": x_to,
+                "steps": steps, "varName": var_name, "env": env
+            }),
+        )
+        .await
+}
+
 /// Estado del sidecar: { ready, spawnError }
 #[tauri::command]
 fn engine_status(engine: tauri::State<'_, engine::Engine>) -> Value {
@@ -65,6 +88,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             eval_cell,
             eval_document,
+            plot_data,
             engine_status,
             ping_engine
         ])

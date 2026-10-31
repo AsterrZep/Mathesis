@@ -87,6 +87,21 @@ function applyOp(op: string, a: number[]): number {
       return Math.exp(a[0]);
     case "Abs":
       return Math.abs(a[0]);
+    // Trig/log (espejo del catálogo de engine/src/mathjson.jl)
+    case "Sin": return Math.sin(a[0]);
+    case "Cos": return Math.cos(a[0]);
+    case "Tan": return Math.tan(a[0]);
+    case "Arcsin": case "Asin": return Math.asin(a[0]);
+    case "Acos": return Math.acos(a[0]);
+    case "Arctan": case "Atan": return Math.atan(a[0]);
+    case "Sinh": return Math.sinh(a[0]);
+    case "Cosh": return Math.cosh(a[0]);
+    case "Tanh": return Math.tanh(a[0]);
+    case "Ln": return Math.log(a[0]);
+    case "Log": return Math.log10(a[0]);
+    case "Lb": return Math.log2(a[0]);
+    case "Max": return Math.max(...a);
+    case "Min": return Math.min(...a);
     // Nodos estructurales (canonical:false de compute-engine) — espejo de
     // engine/src/mathjson.jl
     case "Delimiter":
@@ -276,4 +291,36 @@ export function mockEvalDocument(cells: DocMockCell[]): DocMockResult {
     }
   }
   return { cells: out, definitions: vars, functions: functions.sort() };
+}
+
+// ── Fase 1: plot_data mock (navegador/tests sin Julia) ────────────────────
+// Espejo de engine/src/plot.jl: muestrea la expresión con x libre; errores
+// de dominio → null (gap de uPlot).
+
+export function mockPlotData(
+  ast: unknown,
+  from: number,
+  to: number,
+  steps = 600,
+  varName = "x",
+  env: Record<string, number> = {},
+) {
+  const [lo, hi] = from <= to ? [from, to] : [to, from];
+  const n = Math.min(Math.max(Math.trunc(steps), 2), 5000);
+  const x: number[] = [];
+  const y: (number | null)[] = [];
+  let nonFinite = 0;
+  for (let i = 0; i < n; i++) {
+    const t = lo + ((hi - lo) * i) / (n - 1);
+    x.push(t);
+    const r = mockEvalCell("plot", ast, { ...env, [varName]: t });
+    if (r.status === "ok") {
+      const v = Number(r.value);
+      if (Number.isFinite(v)) y.push(v);
+      else { y.push(null); nonFinite++; }
+    } else {
+      y.push(null); nonFinite++;
+    }
+  }
+  return { x, y, nonFinite, from: lo, to: hi };
 }

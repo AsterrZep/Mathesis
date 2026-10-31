@@ -3,7 +3,7 @@
 // Corren sin Julia: `pnpm test`
 
 import { describe, expect, it } from "vitest";
-import { mockEvalCell, mockEvalDocument } from "./engineMock";
+import { mockEvalCell, mockEvalDocument, mockPlotData } from "./engineMock";
 
 const eval_ = (ast: unknown, env: Record<string, unknown> = {}) =>
   mockEvalCell("c1", ast, env);
@@ -165,5 +165,29 @@ describe("mockEvalDocument — variables encadenadas", () => {
     ]);
     expect(r.cells[0]).toMatchObject({ kind: "definition", value: "f(x)" });
     expect(r.functions).toEqual(["f"]);
+  });
+});
+
+// Fase 1: plot_data mock (espejo de engine/src/plot.jl)
+describe("mockPlotData — muestreo con x libre", () => {
+  it("sin(x) sobre [-π,π] con 5 pts → [0,-1,0,1,0]", () => {
+    const r = mockPlotData(["Sin", "x"], -Math.PI, Math.PI, 5);
+    expect(r.x).toHaveLength(5);
+    expect(r.y[0]).toBeCloseTo(0, 10);
+    expect(r.y[1]).toBeCloseTo(-1, 10);
+    expect(r.y[3]).toBeCloseTo(1, 10);
+    expect(r.nonFinite).toBe(0);
+  });
+
+  it("√x con parte negativa → gaps (null)", () => {
+    const r = mockPlotData(["Sqrt", "x"], -1, 1, 5);
+    expect(r.y[0]).toBeNull();
+    expect(r.y[2]).toBeCloseTo(0, 10);
+    expect(r.nonFinite).toBe(2);
+  });
+
+  it("definitions del documento viajan: a·x con a=2", () => {
+    const r = mockPlotData(["Multiply", "a", "x"], 0, 2, 3, "x", { a: 2 });
+    expect(r.y).toEqual([0, 2, 4]);
   });
 });

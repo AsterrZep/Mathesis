@@ -19,12 +19,13 @@ export interface Cell {
 let seq = 0;
 const newId = () => `c${++seq}_${Date.now().toString(36)}`;
 
-/** Semilla de demo: cadena de variables a=2 → b=a²+1 → b·3 */
+/** Semilla de demo: cadena de variables a=2 → b=a²+1 → b·3 + celda para el gráfico */
 const SEED_CELLS: Cell[] = [
   { id: "c_a", type: "math", latex: "a=2" },
   { id: "c_b", type: "math", latex: "b=a^2+1" },
   { id: "c_calc", type: "math", latex: "b\\cdot 3" },
-  { id: "c_txt", type: "text", latex: "Fase 1 — variables encadenadas: a=2, b=a²+1, y b·3 usa el resultado." },
+  { id: "c_txt", type: "text", latex: "Fase 1 — variables encadenadas: a=2, b=a²+1, y b·3 usa el resultado. Selecciona la celda de abajo para ver su gráfico." },
+  { id: "c_plot", type: "math", latex: "\\sin(x)+\\frac{\\cos(2x)}{2}" },
 ];
 
 interface DocState {
@@ -47,7 +48,9 @@ interface DocState {
 export const useDoc = create<DocState>((set) => ({
   docTitle: "Untitled.math",
   cells: SEED_CELLS,
-  selectedId: null,
+  // Semilla: la celda del gráfico arranca seleccionada → el inspector
+  // muestra la curva al abrir la app (demo sin interacción)
+  selectedId: "c_plot",
   results: {},
   definitions: {},
   functions: [],

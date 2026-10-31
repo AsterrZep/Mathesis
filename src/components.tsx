@@ -2,10 +2,13 @@
 // Documentacion/07-diseno/): topbar, paleta de símbolos, celdas,
 // inspector de scope, statusbar.
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import uPlot from "uplot";
+import "uplot/dist/uPlot.min.css";
 import { useDoc, type Cell } from "./store";
 import { MathField } from "./MathField";
 import { insertIntoActive } from "./mathfield-registry";
+import { type PlotData, parseCellAst, plotData } from "./engine";
 
 // ── Topbar (brand ∫ + doc chip + pill engine + acciones) ─────────────────
 export function Topbar({
@@ -192,27 +195,173 @@ export function CellRow({ cell, index }: { cell: Cell; index: number }) {
   );
 }
 
-// ── Inspector derecho (scope symbols + placeholder de gráficos) ───────────
+// ── Inspector derecho (gráfico uPlot + scope symbols) ─────────────────────
+function PlotPanel() {
+  const cell = useDoc((s) =>
+    s.selectedId ? s.cells.find((c) => c.id === s.selectedId) : undefined,
+  );
+  const definitions = useDoc((s) => s.definitions);
+  const [range, setRange] = useState<[number, number]>([-10, 10]);
+  const [data, setData] = useState<PlotData | null>(null);
+  const [plotState, setPlotState] = useState<
+    "idle" | "loading" | "ok" | "error" | "noplot"
+  >("idle");
+  const [errMsg, setErrMsg] = useState("");
+  const plotRef = useRef<HTMLDivElement>(null);
+  const uplotRef = useRef<uPlot | null>(null);
+
+  const mathSelected = cell !== undefined && cell.type === "math";
+  const latex = cell?.latex ?? "";
+
+  // Auto-plot (debounce 500) al cambiar selección/contenido/rango
+  const doPlot = useCallback(async () => {
+    if (!mathSelected || !latex.trim()) {
+      setData(null);
+      setPlotState("idle");
+      return;
+    }
+    const ast = parseCellAst(latex);
+    if (!ast) {
+      setData(null);
+      setPlotState("noplot");
+      return;
+    }
+    setPlotState("loading");
+    try {
+      const d = await plotData(ast, range[0], range[1], 600, "x", definitions);
+      setData(d);
+      setPlotState("ok");
+    } catch (e) {
+      setErrMsg(e instanceof Error ? e.message : String(e));
+      setPlotState("error");
+    }
+  }, [mathSelected, latex, range, definitions]);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => void doPlot(), 500);
+    return () => window.clearTimeout(t);
+  }, [doPlot]);
+
+  // Montaje/destrucción de uPlot (gap con NaN, tema oscuro)
+  useEffect(() => {
+    if (!data || !plotRef.current) return;
+    uplotRef.current?.destroy();
+    const axisFont = '10px "JetBrains Mono", monospace';
+    const opts: uPlot.Options = {
+      width: plotRef.current.clientWidth || 268,
+      height: 190,
+      series: [
+        {},
+        {
+          label: latex.length > 22 ? latex.slice(0, 22) + "…" : latex,
+          stroke: "#6ea8fe",
+          width: 2,
+          points: { show: false },
+        },
+      ],
+      scales: { x: { time: false } },
+      axes: [
+        {
+          stroke: "#8c919d",
+          font: axisFont,
+          grid: { stroke: "#424751", width: 1 },
+          ticks: { stroke: "#424751" },
+        },
+        {
+          stroke: "#8c919d",
+          font: axisFont,
+          grid: { stroke: "#424751", width: 1 },
+          ticks: { stroke: "#424751" },
+        },
+      ],
+      legend: { show: false },
+    };
+    // null → NaN (gap nativo de uPlot)
+    const ys = data.y.map((v) => (v === null ? NaN : v));
+    const p = new uPlot(opts, [data.x, ys], plotRef.current);
+    uplotRef.current = p;
+    return () => {
+      p.destroy();
+      uplotRef.current = null;
+    };
+  }, [data, latex]);
+
+  return (
+    <>
+      <div className="insp-title-row">
+        <span className="insp-title">⌗ Interactive Phase Plot</span>
+        <span className="insp-badge">{plotState === "ok" ? "live" : "uPlot"}</span>
+      </div>
+      <div className="plot-range">
+        <label>
+          x ∈ [
+          <input
+            type="number"
+            value={range[0]}
+            step={1}
+            onChange={(e) =>
+              setRange([Number(e.target.value) || -10, range[1]])
+            }
+          />
+          ,
+          <input
+            type="number"
+            value={range[1]}
+            step={1}
+            onChange={(e) =>
+              setRange([range[0], Number(e.target.value) || 10])
+            }
+          />
+          ]
+        </label>
+        <button className="btn btn-mini" onClick={() => void doPlot()}>
+          ↻
+        </button>
+      </div>
+      {plotState === "idle" && (
+        <div className="plot-placeholder">
+          <div className="ph-icon">📈</div>
+          <div>
+            Selecciona una celda matemática
+            <br />
+            (p.ej. <b>sin(x)</b>) — se grafica
+            <br />
+            sola en el rango x
+          </div>
+        </div>
+      )}
+      {plotState === "loading" && (
+        <div className="plot-placeholder">◉ muestreando en Julia…</div>
+      )}
+      {plotState === "noplot" && (
+        <div className="plot-placeholder">La celda no es una expresión válida</div>
+      )}
+      {plotState === "error" && (
+        <div className="plot-placeholder plot-err">⚠ {errMsg}</div>
+      )}
+      {plotState === "ok" && data && (
+        <>
+          <div className="plot-canvas" ref={plotRef} />
+          <div className="plot-meta">
+            <span>{data.x.length} pts</span>
+            {data.nonFinite > 0 && (
+              <span className="plot-gaps">● {data.nonFinite} fuera de dominio (gap)</span>
+            )}
+            <span className="plot-hint">arrastra = zoom · doble clic = reset</span>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
 export function Inspector() {
   const definitions = useDoc((s) => s.definitions);
   const functions = useDoc((s) => s.functions);
   const entries = Object.entries(definitions);
   return (
     <aside className="inspector">
-      <div className="insp-title-row">
-        <span className="insp-title">⌗ Interactive Phase Plot</span>
-        <span className="insp-badge">uPlot · Fase 1+</span>
-      </div>
-      <div className="plot-placeholder">
-        <div className="ph-icon">📈</div>
-        <div>
-          Los gráficos llegan con <b>plot_data</b>:
-          <br />
-          Julia malla de puntos → canvas uPlot
-          <br />
-          (zoom/pan local, sin roundtrip)
-        </div>
-      </div>
+      <PlotPanel />
       <div className="insp-title-row">
         <span className="insp-title">Scope Symbols</span>
         <span className="insp-badge">{entries.length} vars</span>

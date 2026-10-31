@@ -289,7 +289,37 @@ math-field.mf, .mathfield-host math-field {
   color: var(--fg-muted); text-align: center;
 }
 .plot-placeholder b { color: var(--primary); }
+.plot-placeholder.plot-err { color: var(--error); border-color: color-mix(in srgb, var(--error) 40%, transparent); }
 .ph-icon { font-size: 22px; margin-bottom: 6px; }
+
+/* Panel de gráfico (uPlot) */
+.plot-range {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+}
+.plot-range label {
+  display: flex; align-items: center; gap: 5px;
+  font-family: var(--font-mono); font-size: 11px; color: var(--fg-dim);
+}
+.plot-range input {
+  width: 54px; background: var(--bg-cell); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--primary); padding: 3px 6px;
+  font-family: var(--font-mono); font-size: 11.5px; outline: none;
+}
+.plot-range input:focus { border-color: var(--accent); }
+.btn-mini {
+  padding: 3px 9px; font-size: 12px; border-radius: 6px;
+}
+.plot-canvas {
+  background: var(--bg-cell); border: 1px solid var(--border);
+  border-radius: 8px; overflow: hidden;
+}
+.plot-canvas .u-over { cursor: crosshair; }
+.plot-meta {
+  display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap;
+  font-family: var(--font-mono); font-size: 9.5px; color: var(--fg-muted);
+}
+.plot-gaps { color: var(--warn, #facc15); }
+.plot-hint { opacity: 0.75; }
 .insp-empty {
   background: var(--bg-cell); border: 1px dashed var(--border);
   border-radius: 8px; padding: 12px;

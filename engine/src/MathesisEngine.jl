@@ -29,6 +29,7 @@ Base.showerror(io::IO, e::RpcError) = print(io, "RPC ", e.code, ": ", e.message)
 
 include("mathjson.jl")
 include("eval.jl")
+include("plot.jl")
 
 # Acceso robusto a params: JSON3.Object acepta símbolos, Dict{String,Any}
 # acepta strings (tests y envíos manuales) — probamos ambos.
@@ -54,6 +55,8 @@ function handle_method(method::AbstractString, params)
         return eval_cell(params)
     elseif method == "eval_document"
         return eval_document(params)
+    elseif method == "plot_data"
+        return plot_data(params)
     elseif method == "shutdown"
         # El loop principal sale al cerrar stdin; confirmamos limpiamente
         return (ok = true,)

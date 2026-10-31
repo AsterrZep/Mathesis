@@ -105,6 +105,38 @@ export async function evalCell(
   return mockEvalCell(cellId, ast, env);
 }
 
+/** Datos de gráfico (Fase 1): Julia muestrea, frontend dibuja (uPlot). */
+export interface PlotData {
+  x: number[];
+  /** null = gap (dominio inválido); el frontend lo pasa a NaN */
+  y: (number | null)[];
+  nonFinite: number;
+  from: number;
+  to: number;
+}
+
+export async function plotData(
+  ast: unknown,
+  from: number,
+  to: number,
+  steps = 600,
+  varName = "x",
+  env: Record<string, number> = {},
+): Promise<PlotData> {
+  if (isTauri) {
+    return await invoke<PlotData>("plot_data", {
+      ast,
+      xFrom: from,
+      xTo: to,
+      steps,
+      varName,
+      env,
+    });
+  }
+  const { mockPlotData } = await import("./engineMock");
+  return mockPlotData(ast, from, to, steps, varName, env);
+}
+
 export async function engineStatus(): Promise<EngineStatus> {
   if (isTauri) {
     return await invoke<EngineStatus>("engine_status");

@@ -5,7 +5,7 @@ using Test
 
 # Incluye el módulo sin ejecutar el loop RPC (PROGRAM_FILE ≠ MathesisEngine.jl)
 include(joinpath(@__DIR__, "..", "src", "MathesisEngine.jl"))
-using .MathesisEngine: MathError, mj_eval, eval_cell, eval_document, process_line, format_number
+using .MathesisEngine: MathError, mj_eval, eval_cell, eval_document, plot_data, process_line, format_number
 
 @testset "mj_eval — aritmética MathJSON" begin
     env = Dict{String,Float64}()
@@ -166,4 +166,125 @@ end
     # hello
     resp5 = process_line("""{"jsonrpc":"2.0","id":5,"method":"hello","params":{}}""")
     @test occursin("\"protocolVersion\":1", resp5)
+end
+
+@testset "mj_eval — catálogo Fase 1: trig, log, raíces, enteros" begin
+    env = Dict{String,Float64}()
+    # Trig completas (incluye Cot/Sec/Csc, antes no soportadas)
+    @test mj_eval(["Sin", 0], env) == 0.0
+    @test mj_eval(["Cos", 0], env) == 1.0
+    @test mj_eval(["Tan", 0], env) == 0.0
+    @test mj_eval(["Cot", pi / 4], env) ≈ 1.0
+    @test mj_eval(["Sec", 0], env) ≈ 1.0
+    @test mj_eval(["Csc", pi / 2], env) ≈ 1.0
+    # Inversas: MathJSON emite Arccos (¡no Acos!) — regresión de nombre
+    @test mj_eval(["Arccos", 1], env) == 0.0
+    @test mj_eval(["Acos", 1], env) == 0.0        # alias aceptado
+    @test mj_eval(["Arcsin", 0], env) == 0.0
+    @test mj_eval(["Arctan", 1], env) ≈ pi / 4
+    @test mj_eval(["Arcsec", 1], env) ≈ 0.0
+    @test mj_eval(["Arccsc", 1], env) ≈ pi / 2
+    # Hiperbólicas inversas
+    @test mj_eval(["Arcsinh", 0], env) == 0.0
+    @test mj_eval(["Arccosh", 1], env) ≈ 0.0
+    @test mj_eval(["Arctanh", 0], env) == 0.0
+    # Log: Ln natural, Log base 10, ["Log", x, base] arbitraria, Lb base 2
+    @test mj_eval(["Ln", "e"], env) ≈ 1.0
+    @test mj_eval(["Log", 100], env) ≈ 2.0
+    @test mj_eval(["Log", 9, 3], env) ≈ 2.0       # \log_3(9) → ["Log",9,3]
+    @test mj_eval(["Lb", 8], env) ≈ 3.0
+    # Raíz n-ésima: par exige x ≥ 0; impar cubre todo ℝ
+    @test mj_eval(["Root", 8, 3], env) ≈ 2.0
+    @test mj_eval(["Root", -8, 3], env) ≈ -2.0
+    @test mj_eval(["Root", 16, 4], env) ≈ 2.0
+    # Redondeo y signo
+    @test mj_eval(["Floor", 2.7], env) == 2.0
+    @test mj_eval(["Ceil", 2.1], env) == 3.0
+    @test mj_eval(["Round", 2.5], env) == 3.0     # ties away from zero
+    @test mj_eval(["Sign", -3], env) == -1.0
+    # Combinatoria y enteros
+    @test mj_eval(["Factorial", 5], env) == 120.0
+    @test mj_eval(["GCD", 12, 18], env) == 6.0
+    @test mj_eval(["LCM", 4, 6], env) == 12.0
+    @test mj_eval(["Mod", 7, 3], env) == 1.0
+    # Mín/Máx con nombres implícitos (\min/\max)
+    @test mj_eval(["Min", 2, 3], env) == 2.0
+    @test mj_eval(["Max", 2, 3], env) == 3.0
+
+    # Apply / InverseFunction: \sin^{-1}(0.5) → ["Apply",["InverseFunction","Sin"],0.5]
+    @test mj_eval(["Apply", ["InverseFunction", "Sin"], 0.5], env) ≈ asin(0.5)
+    @test mj_eval(["Apply", ["InverseFunction", "Cos"], 1], env) ≈ 0.0
+    # Funciones con nombre vía InvisibleOperator: \exp(x), \gcd(12,18), sign
+    @test mj_eval(["InvisibleOperator", "Exp", ["Delimiter", 0]], env) ≈ 1.0
+    @test mj_eval(["InvisibleOperator", "GCD",
+        ["Delimiter", ["Sequence", 12, 18], "'(,)'"]], env) == 6.0
+    @test mj_eval(["InvisibleOperator", "sign", ["Delimiter", -2]], env) == -1.0
+    # Nodos Infinity de MathLive: \infty → "PositiveInfinity"
+    try
+        mj_eval("PositiveInfinity", env)
+        @test false
+    catch e
+        @test e isa MathError && e.code == "INFINITY"
+    end
+    # Nodo Error (LaTeX incompleto) → LATEX_INCOMPLETE, no UNDEFINED_VAR
+    try
+        mj_eval(["Error", "'unexpected-command'"], env)
+        @test false
+    catch e
+        @test e isa MathError && e.code == "LATEX_INCOMPLETE"
+    end
+
+    # Errores de dominio del catálogo nuevo
+    for (ast, code) in [
+        (["Arcsin", 2], "DOMAIN"),
+        (["Arccos", 2], "DOMAIN"),
+        (["Ln", -1], "DOMAIN"),
+        (["Log", -5], "DOMAIN"),
+        (["Log", 8, 1], "DOMAIN"),        # base 1 inválida
+        (["Root", -8, 4], "DOMAIN"),      # raíz par de negativo
+        (["Factorial", -1], "DOMAIN"),   # dominio entero
+        (["Factorial", 2.5], "DOMAIN"),
+        (["GCD", 1.5, 2], "DOMAIN"),     # enteros requeridos
+        (["Arctanh", 2], "DOMAIN"),
+        (["Arccosh", 0], "DOMAIN"),
+        (["Mod", 5, 0], "DIV_ZERO"),
+    ]
+        try
+            mj_eval(ast, env)
+            @test false
+        catch e
+            @test e isa MathError && e.code == code
+        end
+    end
+end
+
+@testset "plot_data — Fase 1: muestreo para uPlot" begin
+    pl(params) = plot_data(Dict{String,Any}(String(k) => v for (k, v) in pairs(params)))
+
+    # sin(x) sobre [-π, π] con 5 puntos: y = [0, 1, 0, -1, 0]
+    r = pl(Dict{Symbol,Any}(
+        :ast => ["Sin", "x"], :xFrom => -pi, :xTo => pi, :steps => 5))
+    @test r.status == "ok" && length(r.x) == 5 && length(r.y) == 5
+    @test r.y[1] ≈ 0.0 atol = 1e-12
+    @test r.y[2] ≈ -1.0 atol = 1e-12   # sin(-π/2)
+    @test r.y[4] ≈ 1.0 atol = 1e-12    # sin(π/2)
+    @test r.nonFinite == 0
+
+    # √x sobre [-1, 1]: mitad negativa → null (gap), no crash
+    r2 = pl(Dict{Symbol,Any}(
+        :ast => ["Sqrt", "x"], :xFrom => -1, :xTo => 1, :xStepsIgnored => 0,
+        :steps => 5))
+    @test r2.y[1] === nothing && r2.y[3] ≈ 0.0 && r2.y[5] ≈ 1.0
+    @test r2.nonFinite == 2
+
+    # definitions del doc viajan: a=2 → graficar a*x sobre [0,2] → [0,2,4]
+    r3 = pl(Dict{Symbol,Any}(
+        :ast => ["Multiply", "a", "x"], :xFrom => 0, :xTo => 2,
+        :steps => 3, :env => Dict("a" => 2.0)))
+    @test r3.y ≈ [0.0, 2.0, 4.0]
+
+    # from/to invertidos se normalizan + steps se acota
+    r4 = pl(Dict{Symbol,Any}(
+        :ast => ["Add", "x", 0], :xFrom => 5, :xTo => -5, :steps => 100_000))
+    @test r4.from == -5.0 && r4.to == 5.0 && length(r4.x) == 5000
 end
