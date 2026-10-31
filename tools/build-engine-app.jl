@@ -29,4 +29,30 @@ const SUFFIX = Sys.iswindows() ? ".exe" : ""
 const BIN = joinpath(DEST, "bin")
 mv(joinpath(BIN, "MathesisEngine" * SUFFIX),
    joinpath(BIN, "mathesis-engine" * SUFFIX); force = true)
+
+# Strip de símbolos de debug (Linux): el .deb bajaba de ~1.17 GB instalados;
+# libLLVM/libjulia-codegen traen debug info enorme. M-5 en 04-plan/fases.md.
+if Sys.islinux()
+    stripped = 0
+    fallidos = 0
+    for (root, _, files) in walkdir(DEST), f in files
+        path = joinpath(root, f)
+        isfile(path) || continue
+        is_elf = try
+            open(io -> read(io, UInt32), path, read = true) == 0x464c457f
+        catch
+            false
+        end
+        is_elf || continue
+        try
+            run(`strip --strip-unneeded $path`)
+            stripped += 1
+        catch e
+            fallidos += 1
+            @warn "strip falló (se conserva el binario)" path exception = e
+        end
+    end
+    @info "Strip completado" archivos = stripped fallidos
+end
+
 @info "Engine compilado" exe = joinpath(BIN, "mathesis-engine" * SUFFIX)

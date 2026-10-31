@@ -139,6 +139,14 @@ async fn ping_engine(engine: tauri::State<'_, engine::Engine>) -> Result<Value, 
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Ventana NEGRO en GPUs antiguas/software: WebKitGTK con compositing no
+    // pinta en algunos drivers (M-3). Lo desactivamos por defecto; el usuario
+    // puede forzar cualquier valor exportando WEBKIT_DISABLE_COMPOSITING_MODE.
+    if std::env::var_os("WEBKIT_DISABLE_COMPOSITING_MODE").is_none() {
+        // set_var: seguro aquí (arranque, antes de spawnear hilos)
+        unsafe { std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1") };
+    }
+
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())

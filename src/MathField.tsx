@@ -14,6 +14,13 @@ import "@cortex-js/compute-engine";
 import "mathlive/fonts.css";
 import { setActiveMathfield } from "./mathfield-registry";
 
+// Sonidos de MathLive DESACTIVADOS: su _soundsDirectory es "./sounds" y los
+// .wav no viajan en el bundle de Tauri → el protocolo devuelve HTML y
+// WebKit/GStreamer intenta decodificar "text/html" como audio en cada tecla
+// (spam de warnings en consola, ver M-4 en 04-plan/fases.md).
+MathfieldElement.keypressSound = null;
+MathfieldElement.plonkSound = null;
+
 interface Props {
   /** LaTeX inicial (valor de la celda al montar; la celda tiene key=id) */
   initial: string;
