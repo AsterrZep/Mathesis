@@ -200,6 +200,8 @@ No pasan por JSON-RPC: son `invoke` directos de Tauri sobre el mismo estado.
 | `plot_data` | ast, xFrom, xTo, steps, varName, env | x[], y[], nonFinite | puente al RPC homónimo |
 | `doc_save` | path?, doc | path (null si cancela) | sin path → diálogo "Guardar como" nativo (`tauri-plugin-dialog`); JSON pretty |
 | `doc_open` | — | {path, doc} \| null | diálogo nativo; null al cancelar |
+| `doc_import` | — | {path, doc, warnings} \| null | diálogo `.mmt` → parser XML (`mmt.rs`); no escribe disco |
+| `doc_export` | kind, path?, doc | path \| null | vía RPC `export` del engine + diálogo "Guardar como" |
 | `engine_status` | — | {ready, spawnError} | estado del sidecar |
 
 El formato del documento (`doc`) es el JSON propio v1:
