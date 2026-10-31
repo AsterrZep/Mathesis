@@ -6,6 +6,7 @@
 //       invoke("eval_document") (Rust → Julia) → resultados por celda.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { listen } from "@tauri-apps/api/event";
 import { Topbar, SymbolPalette, CellRow, Inspector, StatusBar } from "./components";
 import { insertImageFile, useDoc, usedAssets, type DocFile } from "./store";
@@ -25,6 +26,7 @@ import "./App.css";
 const DEBOUNCE_MS = 400;
 
 export default function App() {
+  const { t } = useTranslation();
   const cells = useDoc((s) => s.cells);
   const selectedId = useDoc((s) => s.selectedId);
   const evaluating = useDoc((s) => s.evaluating);
@@ -80,6 +82,14 @@ export default function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = settings.theme;
   }, [settings.theme]);
+
+  // Ancho del texto (settings.textWidth, %) → ancho de la hoja
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--doc-width",
+      String(settings.textWidth ?? 100),
+    );
+  }, [settings.textWidth]);
 
   // Estado del motor al arrancar + eventos del watchdog:
   // "engine-ready" (hand-shake) y "engine-status" (restarted → re-evaluar)
@@ -178,7 +188,7 @@ export default function App() {
     const s = useDoc.getState();
     if (
       s.cells.length > 1 &&
-      !window.confirm("¿Documento nuevo? Se descartan los cambios sin guardar.")
+      !window.confirm(t("confirm.newDoc"))
     ) {
       return;
     }
@@ -192,7 +202,7 @@ export default function App() {
       if (!r) return; // cancelado
       const doc = r.doc as Partial<DocFile> | null;
       if (!doc || !Array.isArray(doc.cells)) {
-        window.alert("El .mmt no tiene celdas reconocibles.");
+        window.alert(t("imp.emptyCells"));
         return;
       }
       // filePath = null a propósito: el .mmt NO es nuestro JSON — al guardar
@@ -207,11 +217,14 @@ export default function App() {
       });
       if (r.warnings.length > 0) {
         const shown = r.warnings.slice(0, 8).join("\n• ");
-        const more = r.warnings.length > 8 ? `\n(+${r.warnings.length - 8} más)` : "";
-        window.alert(`Importado con avisos:\n• ${shown}${more}`);
+        const more =
+          r.warnings.length > 8
+            ? `\n${t("imp.more", { n: r.warnings.length - 8 })}`
+            : "";
+        window.alert(`${t("imp.warningsHead")}\n• ${shown}${more}`);
       }
     } catch (e) {
-      window.alert(`No se pudo importar: ${e instanceof Error ? e.message : e}`);
+      window.alert(t("imp.failed", { msg: e instanceof Error ? e.message : e }));
     }
   }, []);
 
@@ -232,7 +245,7 @@ export default function App() {
       const p = await docExport("latex", { version: 1, title: s.docTitle, cells });
       if (p) console.info("[export] guardado en", p);
     } catch (e) {
-      window.alert(`No se pudo exportar: ${e instanceof Error ? e.message : e}`);
+      window.alert(t("export.failed", { msg: e instanceof Error ? e.message : e }));
     }
   }, []);
 
@@ -304,12 +317,12 @@ export default function App() {
 
   const chip =
     status === null
-      ? { cls: "neutral", text: isTauri ? "motor…" : "mock (navegador)" }
+      ? { cls: "neutral", text: isTauri ? t("engine.booting") : t("engine.mock") }
       : status.spawnError
-        ? { cls: "error", text: "sin motor Julia" }
+        ? { cls: "error", text: t("engine.noEngine") }
         : status.ready
-          ? { cls: "ok", text: "engine ready" }
-          : { cls: "neutral", text: "iniciando motor…" };
+          ? { cls: "ok", text: t("engine.ready") }
+          : { cls: "neutral", text: t("engine.starting") };
 
   const onInsert = () => {
     const idx = selectedId
@@ -343,18 +356,14 @@ export default function App() {
           <div className="sheet-canvas">
             <div className="sheet-header">
               <div className="sh-meta">
-                <span className="sh-crumb">📁 Documento</span>
+                <span className="sh-crumb">{t("header.crumb")}</span>
                 <span>·</span>
                 <span>Mathesis Worksheet</span>
                 <span>·</span>
-                <span>Fase 1</span>
+                <span>{t("header.phase")}</span>
               </div>
-              <h1 className="sh-title">Hoja de cálculo matemática</h1>
-              <p className="sh-desc">
-                Cada celda se evalúa en orden con el motor Julia: define{" "}
-                <b>a</b>, encadena <b>b=a²+1</b>, usa resultados en la
-                siguiente celda — y observa la tabla de símbolos a la derecha.
-              </p>
+              <h1 className="sh-title">{t("header.title")}</h1>
+              <p className="sh-desc">{t("header.desc")}</p>
             </div>
             <div className="cells">
               {cells.map((c, i) => (
@@ -373,31 +382,31 @@ export default function App() {
                 }}
               />
               <button className="add-block" onClick={() => addCell(cells.length - 1, "math")}>
-                ＋ Add formula
+                {t("add.formula")}
               </button>
               <button className="add-block" onClick={() => addCell(cells.length - 1, "text")}>
-                ＋ Text block
+                {t("add.text")}
               </button>
               <button
                 className="add-block"
-                title="Insertar imagen (o Ctrl+V para pegar del portapapeles)"
+                title={t("add.imageTitle")}
                 onClick={() => imgInputRef.current?.click()}
               >
-                ＋ Image
+                {t("add.image")}
               </button>
               <button
                 className="add-block"
-                title="Rango x para los gráficos de debajo"
+                title={t("add.intervalTitle")}
                 onClick={() => addCell(cells.length - 1, "interval")}
               >
-                ＋ Interval
+                {t("add.interval")}
               </button>
               <button
                 className="add-block"
-                title="Gráfico 2D (1-2 expresiones, muestreo en Julia)"
+                title={t("add.plotTitle")}
                 onClick={() => addCell(cells.length - 1, "plot")}
               >
-                ＋ Plot
+                {t("add.plot")}
               </button>
             </div>
           </div>
@@ -407,8 +416,8 @@ export default function App() {
       <StatusBar
         engineText={
           isTauri
-            ? `◉ ${chip.text} · julia sidecar · RPC json-ndjson`
-            : "◉ mock navegador · sin Julia"
+            ? t("statusbar.engineJulia", { state: chip.text })
+            : t("statusbar.engineMock")
         }
       />
     </div>

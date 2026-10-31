@@ -3,9 +3,11 @@
 // inspector de scope, statusbar.
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
 import { replaceImageCell, useDoc, type Cell } from "./store";
+import { setLang } from "./i18n";
 import { MathField } from "./MathField";
 import { insertIntoActive } from "./mathfield-registry";
 import {
@@ -55,13 +57,14 @@ export function Topbar({
   evaluating: boolean;
 }) {
   const docTitle = useDoc((s) => s.docTitle);
+  const { t, i18n } = useTranslation();
   return (
     <header className="topbar">
       <div className="tb-left">
         <div className="brand-mark">∫</div>
         <span className="brand-name">Mathesis</span>
         <span className="tb-sep" />
-        <div className="doc-chip" title="Documento">
+        <div className="doc-chip" title={t("topbar.docChip")}>
           <span className="doc-icon">▤</span>
           <span>{docTitle}</span>
           <span className="doc-ok">●</span>
@@ -76,7 +79,7 @@ export function Topbar({
           className="btn btn-ghost"
           onClick={onUndo}
           disabled={!canUndo}
-          title="Deshacer (Ctrl+Z)"
+          title={t("topbar.undo")}
         >
           ↶
         </button>
@@ -84,7 +87,7 @@ export function Topbar({
           className="btn btn-ghost"
           onClick={onRedo}
           disabled={!canRedo}
-          title="Rehacer (Ctrl+Shift+Z)"
+          title={t("topbar.redo")}
         >
           ↷
         </button>
@@ -92,39 +95,46 @@ export function Topbar({
         <button
           className="btn btn-ghost"
           onClick={onToggleTheme}
-          title={`Tema ${theme === "dark" ? "claro" : "oscuro"} (preferencia del documento)`}
+          title={theme === "dark" ? t("topbar.themeDark") : t("topbar.themeLight")}
         >
           {theme === "dark" ? "☀" : "☾"}
         </button>
-        <span className="tb-sep" />
-        <button className="btn btn-ghost" onClick={onNew} title="Nuevo documento (vacío, Ctrl+N)">
-          🗀 New
+        <button
+          className="btn btn-ghost"
+          title={t("topbar.langTitle")}
+          onClick={() => setLang(i18n.language === "es" ? "en" : "es")}
+        >
+          🌐 {t("topbar.lang")}
         </button>
-        <button className="btn btn-ghost" onClick={onOpen} title="Abrir… (Ctrl+O)">
-          📂 Open
+        <span className="tb-sep" />
+        <button className="btn btn-ghost" onClick={onNew} title={t("topbar.newDocTitle")}>
+          {t("topbar.newDoc")}
+        </button>
+        <button className="btn btn-ghost" onClick={onOpen} title={t("topbar.openTitle")}>
+          {t("topbar.open")}
         </button>
         <button
           className="btn btn-ghost"
           onClick={onImport}
-          title="Importar documento .mmt del microMathematics (Fase 2)"
+          title={t("topbar.importTitle")}
         >
-          ⤒ Import
+          {t("topbar.import")}
         </button>
-        <button className="btn btn-ghost" onClick={onSave} title="Guardar (Ctrl+S)">
-          💾 Save
+        <button className="btn btn-ghost" onClick={onSave} title={t("topbar.saveTitle")}>
+          {t("topbar.save")}
         </button>
         <button className="btn btn-ghost" onClick={onInsert}>
-          ＋ Insert Block
+          {t("topbar.insert")}
         </button>
         <button className="btn btn-ghost" onClick={onRun} disabled={evaluating}>
-          <span className="btn-ico">▶</span> {evaluating ? "…" : "Run All"}
+          <span className="btn-ico">▶</span> {evaluating ? t("topbar.running") : t("topbar.run")}
         </button>
         <button
           className="btn btn-primary"
-          title="Exportar a LaTeX (.tex) con resultados — Fase 2"
+          title={t("topbar.exportTitle")}
           onClick={onExport}
         >
-          ⤓ Export
+          {t("topbar.export")}
         </button>
       </div>
     </header>
@@ -167,15 +177,16 @@ const PALETTE: Record<string, [label: string, latex: string][]> = {
 };
 
 export function SymbolPalette() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState("Greek");
   return (
     <aside className="palette">
       <div className="pal-head">
         <div className="pal-title-row">
-          <span className="pal-title">Symbol Palette</span>
+          <span className="pal-title">{t("palette.title")}</span>
           <span className="pal-tag">TeX</span>
         </div>
-        <div className="pal-sub">LaTeX &amp; Math Engine Ready</div>
+        <div className="pal-sub">{t("palette.sub")}</div>
       </div>
       <div className="pal-tabs">
         {Object.keys(PALETTE).map((t) => (
@@ -192,14 +203,14 @@ export function SymbolPalette() {
         {PALETTE[tab].map(([label, latex]) => (
           <button
             key={label + latex}
-            title={`insertar ${latex}`}
+            title={t("palette.insertOn", { latex })}
             onClick={() => insertIntoActive(latex)}
           >
             {label}
           </button>
         ))}
       </div>
-      <div className="pal-section-label">Structures</div>
+      <div className="pal-section-label">{t("palette.structures")}</div>
       <div className="pal-structs">
         {[
           ["a/b", "\\frac{}{}"],
@@ -209,12 +220,12 @@ export function SymbolPalette() {
         ].map(([label, latex]) => (
           <button key={label} onClick={() => insertIntoActive(latex)}>
             <span className="st-math">{label}</span>
-            <span className="st-lbl">{label === "a/b" ? "Fraction" : label === "x^n" ? "Power" : label === "x_i" ? "Subscript" : "Group"}</span>
+            <span className="st-lbl">{label === "a/b" ? t("palette.frac") : label === "x^n" ? t("palette.power") : label === "x_i" ? t("palette.subscript") : t("palette.group")}</span>
           </button>
         ))}
       </div>
       <div className="pal-footer">
-        <span>⌨ Focusea una fórmula e inserta</span>
+        <span>{t("palette.hint")}</span>
       </div>
     </aside>
   );
@@ -227,6 +238,7 @@ export function CellRow({ cell, index }: { cell: Cell; index: number }) {
   const setLatex = useDoc((s) => s.setLatex);
   const setSelected = useDoc((s) => s.setSelected);
   const removeCell = useDoc((s) => s.removeCell);
+  const { t } = useTranslation();
 
   return (
     <div
@@ -240,7 +252,7 @@ export function CellRow({ cell, index }: { cell: Cell; index: number }) {
         {cell.type === "image" && <span className="cell-badge">img</span>}
         <button
           className="cell-del"
-          title="Eliminar celda"
+          title={t("cell.del")}
           onClick={(e) => {
             e.stopPropagation();
             removeCell(cell.id);
@@ -257,7 +269,7 @@ export function CellRow({ cell, index }: { cell: Cell; index: number }) {
             className="cell-textarea"
             value={cell.latex}
             rows={2}
-            placeholder="Texto…"
+            placeholder={t("cell.textPlaceholder")}
             onChange={(e) => setLatex(cell.id, e.target.value)}
             onFocus={() => setSelected(cell.id)}
           />
@@ -280,11 +292,11 @@ export function CellRow({ cell, index }: { cell: Cell; index: number }) {
           ) : result.kind === "text" ? (
             <span className="res-idle" />
           ) : result.kind === "definition" ? (
-            <span className="pill pill-dim" title="función de usuario definida">
+            <span className="pill pill-dim" title={t("cell.defTooltip")}>
               {result.value}
             </span>
           ) : (
-            <span className="pill" title="resultado (Julia)">
+            <span className="pill" title={t("cell.resultTooltip")}>
               {result.value}
               {result.unit && result.unit !== "1" && (
                 <span className="pill-unit">{result.unit}</span>
@@ -301,9 +313,10 @@ export function CellRow({ cell, index }: { cell: Cell; index: number }) {
 export const ImageCell = memo(function ImageCell({ cell }: { cell: Cell }) {
   const asset = useDoc((s) => (cell.assetId ? s.assets[cell.assetId] : undefined));
   const replaceRef = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
 
   if (!cell.assetId || !asset) {
-    return <div className="img-missing">⚠ Imagen ausente en el documento</div>;
+    return <div className="img-missing">{t("image.missing")}</div>;
   }
   return (
     <div className="img-wrap">
@@ -317,13 +330,13 @@ export const ImageCell = memo(function ImageCell({ cell }: { cell: Cell }) {
       <div className="img-actions">
         <button
           className="btn btn-mini"
-          title="Reemplazar imagen"
+          title={t("image.replaceTitle")}
           onClick={(e) => {
             e.stopPropagation();
             replaceRef.current?.click();
           }}
         >
-          ⇄ Reemplazar
+          {t("image.replace")}
         </button>
         <span className="img-meta">
           {asset.mime.replace("image/", "")} · {Math.max(1, Math.round(asset.bytes / 1024))} KB
@@ -347,6 +360,7 @@ export const ImageCell = memo(function ImageCell({ cell }: { cell: Cell }) {
 // ── Celda de intervalo: rango x que usan los gráficos de debajo ───────────
 function IntervalControls({ cell }: { cell: Cell }) {
   const patchCell = useDoc((s) => s.patchCell);
+  const { t } = useTranslation();
   const iv = cell.interval ?? { from: "-10", to: "10", steps: 400 };
   return (
     <div className="interval-body">
@@ -372,7 +386,7 @@ function IntervalControls({ cell }: { cell: Cell }) {
         }
       />
       <span>pts</span>
-      <span className="interval-hint">los gráficos situados debajo usan este rango</span>
+      <span className="interval-hint">{t("interval.hint")}</span>
     </div>
   );
 }
@@ -382,6 +396,7 @@ function PlotControls({ cell }: { cell: Cell }) {
   const cells = useDoc((s) => s.cells);
   const definitions = useDoc((s) => s.definitions);
   const patchCell = useDoc((s) => s.patchCell);
+  const { t } = useTranslation();
   const cfg = cell.plot ?? { f1: "", f2: "", varName: "x" };
 
   // Rango: último intervalo ANTES de esta celda (si no, -10..10). Los valores
@@ -478,7 +493,7 @@ function PlotControls({ cell }: { cell: Cell }) {
         await saveArtifact("grafico.png", "png", b64, true);
       }
     } catch (e) {
-      window.alert(`No se pudo exportar: ${e instanceof Error ? e.message : e}`);
+      window.alert(t("plot.saveFigError", { msg: e instanceof Error ? e.message : e }));
     }
   };
 
@@ -502,18 +517,15 @@ function PlotControls({ cell }: { cell: Cell }) {
           initial={cfg.f2}
           onChange={(l) => patchCell(cell.id, { plot: { ...cfg, f2: l } })}
         />
-        <span className="plot-var" title="variable libre">
+        <span className="plot-var" title={t("plot.rangeVar", { v: cfg.varName })}>
           vs {cfg.varName}
         </span>
       </div>
       {state === "idle" && (
-        <div className="plot-cell-msg">
-          Escribe una expresión (p.ej. <b>sin(x)</b>) — se grafica sola en el
-          rango del intervalo superior
-        </div>
+        <div className="plot-cell-msg">{t("plot.emptySlots")}</div>
       )}
       {state === "loading" && (
-        <div className="plot-cell-msg">◉ muestreando en Julia…</div>
+        <div className="plot-cell-msg">{t("plot.loading")}</div>
       )}
       {state === "error" && <div className="plot-cell-msg err">⚠ {errMsg}</div>}
       {state === "ok" && data && (
@@ -521,20 +533,20 @@ function PlotControls({ cell }: { cell: Cell }) {
           <Plot2D x={data.x} series={data.series} />
           <div className="plot-meta">
             <span>
-              x ∈ [{data.range[0]}, {data.range[1]}] · {data.x.length} pts
+              x ∈ [{data.range[0]}, {data.range[1]}] · {t("plot.pts", { n: data.x.length })}
             </span>
             {data.nonFinite > 0 && (
-              <span className="plot-gaps">● {data.nonFinite} fuera de dominio (gap)</span>
+              <span className="plot-gaps">{t("plot.gaps", { n: data.nonFinite })}</span>
             )}
             <span className="plot-export">
-              <button className="btn btn-mini" title="Exportar figura en SVG" onClick={() => void saveFig("svg")}>
+              <button className="btn btn-mini" title={t("plot.exportSvg")} onClick={() => void saveFig("svg")}>
                 ⤓ SVG
               </button>
-              <button className="btn btn-mini" title="Exportar figura en PNG (2×)" onClick={() => void saveFig("png")}>
+              <button className="btn btn-mini" title={t("plot.exportPng")} onClick={() => void saveFig("png")}>
                 ⤓ PNG
               </button>
             </span>
-            <span className="plot-hint">arrastra = zoom · doble clic = reset</span>
+            <span className="plot-hint">{t("plot.zoomHint")}</span>
           </div>
         </>
       )}
@@ -544,6 +556,7 @@ function PlotControls({ cell }: { cell: Cell }) {
 
 // ── Inspector derecho (gráfico uPlot + scope symbols) ─────────────────────
 function PlotPanel() {
+  const { t } = useTranslation();
   const cell = useDoc((s) =>
     s.selectedId ? s.cells.find((c) => c.id === s.selectedId) : undefined,
   );
@@ -668,20 +681,14 @@ function PlotPanel() {
       {plotState === "idle" && (
         <div className="plot-placeholder">
           <div className="ph-icon">📈</div>
-          <div>
-            Selecciona una celda matemática
-            <br />
-            (p.ej. <b>sin(x)</b>) — se grafica
-            <br />
-            sola en el rango x
-          </div>
+          <div>{t("plot.idle2")}</div>
         </div>
       )}
       {plotState === "loading" && (
-        <div className="plot-placeholder">◉ muestreando en Julia…</div>
+        <div className="plot-placeholder">{t("plot.loading")}</div>
       )}
       {plotState === "noplot" && (
-        <div className="plot-placeholder">La celda no es una expresión válida</div>
+        <div className="plot-placeholder">{t("plot.noplot")}</div>
       )}
       {plotState === "error" && (
         <div className="plot-placeholder plot-err">⚠ {errMsg}</div>
@@ -690,11 +697,11 @@ function PlotPanel() {
         <>
           <div className="plot-canvas" ref={plotRef} />
           <div className="plot-meta">
-            <span>{data.x.length} pts</span>
+            <span>{t("plot.pts", { n: data.x.length })}</span>
             {data.nonFinite > 0 && (
-              <span className="plot-gaps">● {data.nonFinite} fuera de dominio (gap)</span>
+              <span className="plot-gaps">{t("plot.gaps", { n: data.nonFinite })}</span>
             )}
-            <span className="plot-hint">arrastra = zoom · doble clic = reset</span>
+            <span className="plot-hint">{t("plot.zoomHint")}</span>
           </div>
         </>
       )}
@@ -705,6 +712,9 @@ function PlotPanel() {
 export function Inspector() {
   const definitions = useDoc((s) => s.definitions);
   const functions = useDoc((s) => s.functions);
+  const settings = useDoc((s) => s.settings);
+  const setSettings = useDoc((s) => s.setSettings);
+  const { t } = useTranslation();
   const entries = Object.entries(definitions);
   // Unidades (Fase 2): las definiciones pueden venir como {value, unit}
   const show = (v: DefinitionValue) =>
@@ -715,13 +725,11 @@ export function Inspector() {
     <aside className="inspector">
       <PlotPanel />
       <div className="insp-title-row">
-        <span className="insp-title">Scope Symbols</span>
-        <span className="insp-badge">{entries.length} vars</span>
+        <span className="insp-title">{t("inspector.scope")}</span>
+        <span className="insp-badge">{t("inspector.varCount", { n: entries.length })}</span>
       </div>
       {entries.length === 0 ? (
-        <div className="insp-empty">
-          Sin definiciones aún — prueba <code>a=2</code> en una celda
-        </div>
+        <div className="insp-empty">{t("inspector.noScope")}</div>
       ) : (
         <table className="scope-table">
           <thead>
@@ -748,7 +756,7 @@ export function Inspector() {
       {functions.length > 0 && (
         <>
           <div className="insp-title-row">
-            <span className="insp-title">Funciones</span>
+            <span className="insp-title">{t("inspector.functions")}</span>
           </div>
           <div className="fn-chips">
             {functions.map((f) => (
@@ -759,6 +767,37 @@ export function Inspector() {
           </div>
         </>
       )}
+      <div className="insp-title-row">
+        <span className="insp-title">⚙ {t("inspector.docTitle")}</span>
+      </div>
+      <div className="doc-prefs">
+        <label>
+          <span>{t("inspector.digits")}</span>
+          <input
+            type="number"
+            min={1}
+            max={17}
+            value={settings.digits}
+            onChange={(e) =>
+              setSettings({
+                digits: Math.min(17, Math.max(1, Number(e.target.value) || 15)),
+              })
+            }
+          />
+        </label>
+        <label>
+          <span>{t("inspector.textWidth")}</span>
+          <input
+            type="range"
+            min={40}
+            max={100}
+            step={5}
+            value={settings.textWidth ?? 100}
+            onChange={(e) => setSettings({ textWidth: Number(e.target.value) })}
+          />
+          <span className="pref-val">{settings.textWidth ?? 100}%</span>
+        </label>
+      </div>
     </aside>
   );
 }
@@ -767,15 +806,17 @@ export function Inspector() {
 export function StatusBar({ engineText }: { engineText: string }) {
   const cells = useDoc((s) => s.cells);
   const definitions = useDoc((s) => s.definitions);
+  const { t } = useTranslation();
   return (
     <footer className="statusbar">
       <span className="sb-engine">{engineText}</span>
       <span className="sb-mid">
-        {cells.length} celdas · {Object.keys(definitions).length} variables definidas
+        {t("statusbar.counts", {
+          cells: cells.length,
+          vars: Object.keys(definitions).length,
+        })}
       </span>
-      <span className="sb-hint">
-        Fase 1 · variables encadenadas · f(x):=… · paleta ← inserta en la fórmula focuseada
-      </span>
+      <span className="sb-hint">{t("statusbar.hint")}</span>
     </footer>
   );
 }

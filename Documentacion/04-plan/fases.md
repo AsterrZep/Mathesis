@@ -92,17 +92,17 @@
 evaluación incremental, watchdog y preferencias. CI: tests + **release `v0.1.0`
 publicada** (solo Linux: `.deb` + `.rpm`, PackageCompiler).
 
-## Fase 2 — Unidades, formato y documentos ricos
+## Fase 2 — Unidades, formato y documentos ricos ✅ COMPLETADA (31-oct-2026)
 
-> **Progreso (31-oct-2026):** ✅ **Unidades con Unitful** (núcleo) ·
-> ✅ **Unidades de información** custom · ✅ **Export LaTeX** (botón Export) ·
-> ✅ **Celda de imagen** (dedup SHA-256 + WebP selectivo + GC) ·
-> ✅ **Importador `.mmt`** (parser XML en Rust, botón ⤒ Import) ·
-> ✅ **Export PNG/SVG de figuras** (renderer ligero en frontend; Makie deferido
-> a Fase 4 — revisión ADR-003) · ⬜ ancho de texto · ⬜ i18n ·
-> ✅ tema claro/oscuro (hecho en Fase 1)
+> **✅ FASE 2 COMPLETADA (31-oct-2026):** Unidades con Unitful (núcleo +
+> info custom) · Export LaTeX · Celda de imagen (dedup SHA-256 + WebP + GC) ·
+> Importador `.mmt` (parser XML en Rust) · Export PNG/SVG de figuras (renderer
+> ligero en frontend; Makie deferido a Fase 4 — revisión ADR-003) ·
+> **Preferencias del documento** (tema · dígitos · **ancho de texto** con UI en
+> el Inspector) · **i18n ES/EN** (i18next, toggle 🌐, persistido en
+> localStorage, test de paridad recursivo de claves + interpolaciones)
 >
-> Tests: **175 Julia + 57 vitest + 4 cargo**
+> Tests: **175 Julia + 60 vitest + 4 cargo** · CI verde
 
 - [x] **Unidades** (Unitful): parse de `5 m` (hoja `"m"` → cantidad), conversión
       `1 km → 1000 m` (`["To",…]`), errores de incompatibilidad (`UNIT_MISMATCH`),
@@ -135,8 +135,13 @@ publicada** (solo Linux: `.deb` + `.rpm`, PackageCompiler).
       sysimage/arranque (revisión ADR-003 — decisión de rendimiento; ver
       nota en decisiones-tecnicas.md)
 - [ ] Export imagen del documento completo (render de celdas → canvas → PNG)
-- [ ] Preferencias del documento (dígitos ✅ en Fase 1 · ancho texto pendiente)
-- [ ] i18n: ES + EN (i18next)
+- [x] Preferencias del documento con **UI en el Inspector**: dígitos
+      significativos (1-17, fuerza re-eval completa), ancho de texto (40-100 %
+      vía `--doc-width` en la hoja) — ambas persistidas en `doc.settings`
+- [x] i18n: ES + EN (i18next) — `src/locales/{es,en}.ts`, toggle 🌐 en el
+      topbar (persistencia localStorage, arranca por idioma de sistema),
+      ~50 cadenas de UI traducidas, test de **paridad recursiva** de claves e
+      interpolaciones entre idiomas
 - [x] Tema claro/oscuro (Fase 1: `settings.theme` + `data-theme`)
 
 ## Fase 3 — Potencia matemática
