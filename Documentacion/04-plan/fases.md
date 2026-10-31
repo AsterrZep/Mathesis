@@ -3,19 +3,27 @@
 > Estrategia: **MVP primero** (decisión del usuario), luego expansión por fases.
 > Cada fase deja una app utilizable.
 
-## Fase 0 — Cimientos (semilla)
+## Fase 0 — Cimientos (semilla) ✅ COMPLETADA (30-oct-2026)
 
 **Objetivo:** esqueleto que ejecuta "2+2" de punta a punta.
 
-- [ ] Scaffold del monorepo (`mathesis/`) con las 3 carpetas: `src-tauri/`, `src/`, `engine/`
-- [ ] `pnpm create tauri-app` + React + TS + Vite
-- [ ] Engine Julia mínimo: loop RPC NDJSON en stdin/stdout con `hello`, `ping`, `eval_cell` (solo aritmética)
-- [ ] Comando Tauri `eval_cell` que hace puente frontend→Rust→Julia
-- [ ] UI mínima: un `<math-field>` + un `<div>` de resultado
-- [ ] Mock engine en TS para tests sin Julia
-- [ ] CI básica (lint + test)
+- [x] Scaffold del monorepo con las 3 carpetas: `src-tauri/`, `src/`, `engine/`
+- [x] `pnpm create tauri-app` + React + TS + Vite
+- [x] Engine Julia mínimo: loop RPC NDJSON con `hello`, `ping`, `eval_cell` (aritmética + Delimiter/InvisibleOperator/Tuple)
+- [x] Comando Tauri `eval_cell` (puente frontend→Rust→Julia con correlación por id)
+- [x] UI mínima: `<math-field>` (MathLive) + resultado en vivo con debounce
+- [x] Mock engine en TS espejo del engine Julia (16 tests vitest)
+- [x] CI básica (frontend + Rust clippy + Julia tests) — **verde en GitHub Actions**
 
-**Criterio de salida:** escribir `2+2` en el editor muestra `4` (vía Julia real).
+**Criterio de salida:** escribir `2+2` en el editor muestra `4` (vía Julia real) ✅
+(verificado: `22(8) = 176` end-to-end en app real, run `41159916123` CI verde)
+
+**Extra cerrado en Fase 0:**
+- M-1 sombreado blanco (causa raíz: `--contains-highlight-background-color`)
+- M-2 parse `canonical:false` (fix bug "Variable no definida: NaN")
+- Repo público `AsterrZep/Mathesis` + licencia **GPL-3.0** (ADR-006) +3 commits
+- Diseño UI vía MCP Stitch (`Documentacion/07-diseno/`)
+- Tests: **16 vitest + 35 Julia**
 
 ## Fase 1 — MVP (hoja de cálculo funcional)
 
