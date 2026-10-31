@@ -73,7 +73,12 @@ jobs:
 
       # ── 3) Tauri build (AppImage + deb + rpm con el engine empaquetado) ──
       - name: Build de la app
-        run: pnpm tauri build
+        env:
+          # linuxdeploy (AppImage) no puede montar FUSE en los runners:
+          # extrae y ejecuta directamente (workaround de Tauri)
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        # Si el AppImage insiste en fallar, la release sale igual con deb+rpm
+        run: pnpm tauri build || pnpm tauri build --bundles deb,rpm
 
       - name: Subir instaladores (artifacts)
         uses: actions/upload-artifact@v4
