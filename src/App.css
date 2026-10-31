@@ -22,6 +22,25 @@
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
+/* Tema claro del documento (settings.theme, Fase 1) */
+:root[data-theme="light"] {
+  --bg: #f4f5f8;
+  --bg-panel: #ffffff;
+  --bg-cell: #ffffff;
+  --bg-cell-high: #e9ebf0;
+  --bg-bright: #dde0e6;
+  --border: #d4d7de;
+  --border-strong: #9aa0ab;
+  --fg: #1c1e26;
+  --fg-dim: #3d414d;
+  --fg-muted: #6b7180;
+  --primary: #1f4fa8;
+  --accent: #2f6fd0;
+  --ok: #147a44;
+  --error: #a41a12;
+  --error-container: #ffdad6;
+}
+
 * { box-sizing: border-box; }
 
 html, body, #root { height: 100%; margin: 0; }

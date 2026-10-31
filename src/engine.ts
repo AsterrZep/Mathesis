@@ -53,26 +53,38 @@ export interface EvalCellPayload {
   latex: string;
 }
 
+export interface EvalDocOptions {
+  /**
+   * Evaluación INCREMENTAL: solo estas celdas (y las que dependen de sus
+   * símbolos) se re-evalúan en el engine; el resto sale de su caché.
+   */
+  changedCellIds?: string[];
+  /** Dígitos significativos del formato numérico (settings.digits) */
+  digits?: number;
+}
+
 /** Evalúa el documento completo (Fase 1): propagación de variables. */
 export async function evalDocument(
   cells: EvalCellPayload[],
+  opts: EvalDocOptions = {},
 ): Promise<DocEvalResult> {
-  if (isTauri) {
-    // El parse LaTeX→MathJSON (canonical:false) lo hace Julia vía latex? NO —
-    // el frontend parsea aquí abajo: ver parseCellAst()
-    const payload = cells.map((c) => ({
-      cellId: c.cellId,
-      type: c.type,
-      ast: c.type === "text" ? null : parseCellAst(c.latex),
-    }));
-    return await invoke<DocEvalResult>("eval_document", { cells: payload });
-  }
-  const { mockEvalDocument } = await import("./engineMock");
-  return mockEvalDocument(cells.map((c) => ({
+  const payload = cells.map((c) => ({
     cellId: c.cellId,
     type: c.type,
     ast: c.type === "text" ? null : parseCellAst(c.latex),
-  })));
+  }));
+  if (isTauri) {
+    // El parse LaTeX→MathJSON (canonical:false) lo hace el frontend — ver
+    // parseCellAst(); la autoridad matemática sigue siendo Julia (M-2)
+    return await invoke<DocEvalResult>("eval_document", {
+      cells: payload,
+      changedCellIds: opts.changedCellIds ?? null,
+      settings: opts.digits ? { digits: opts.digits } : null,
+    });
+  }
+  const { mockEvalDocument } = await import("./engineMock");
+  // El mock ignora changedCellIds (evalúa completo: mismos resultados)
+  return mockEvalDocument(payload);
 }
 
 const ce = new ComputeEngine();

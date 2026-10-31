@@ -55,7 +55,10 @@ end
 @testset "format_number" begin
     @test format_number(4.0) == "4"
     @test format_number(-2.5) == "-2.5"
-    @test format_number(1 / 3) == string(1 / 3)
+    @test format_number(1 / 3) == string(round(1 / 3, sigdigits = 15))
+    # dígitos significativos configurables (settings.digits del documento)
+    @test format_number(Float64(pi), 4) == "3.142"
+    @test format_number(Float64(pi), 6) == "3.14159"
 end
 
 @testset "nodos estructurales (ce.parse canonical:false)" begin
@@ -256,6 +259,72 @@ end
             @test e isa MathError && e.code == code
         end
     end
+end
+
+@testset "eval_document — incremental (changedCellIds + caché)" begin
+    doc(cells) = Dict{String,Any}("cells" => cells)
+    ex(cid, ast) = Dict{String,Any}("cellId" => cid, "type" => "expression", "ast" => ast)
+    tx(cid, text) = Dict{String,Any}("cellId" => cid, "type" => "text", "latex" => text)
+
+    # Eval inicial completa (a=2 → b=a²+1 → c=b·3 + celda ajena d=7)
+    cells0 = [
+        ex("i_a", ["Equal", "a", 2]),
+        ex("i_b", ["Equal", "b", ["Add", ["Power", "a", 2], 1]]),
+        ex("i_c", ["Multiply", "b", 3]),
+        ex("i_d", ["Equal", "d", 7]),
+        tx("i_t", "nota"),
+    ]
+    r0 = eval_document(doc(cells0))
+    @test r0.recomputed == "all"
+    vals0 = Dict(c.cellId => get(c, :value, nothing) for c in r0.cells)
+    @test vals0["i_c"] == "15"
+
+    # 1) Cambiar solo i_a (a=3) → re-evalúa a, b, c; d y texto se replayan
+    cells1 = copy(cells0); cells1[1] = ex("i_a", ["Equal", "a", 3])
+    r1 = eval_document(Dict{String,Any}("cells" => cells1,
+        "changedCellIds" => ["i_a"]))
+    @test r1.recomputed == ["i_a", "i_b", "i_c"]
+    vals1 = Dict(c.cellId => get(c, :value, nothing) for c in r1.cells)
+    @test vals1["i_b"] == "10"    # 3²+1
+    @test vals1["i_c"] == "30"
+    @test vals1["i_d"] == "7"     # replay desde caché
+
+    # 2) Cambiar una celda AJENA (i_d) → solo i_d
+    cells2 = copy(cells1); cells2[4] = ex("i_d", ["Equal", "d", 9])
+    r2 = eval_document(Dict{String,Any}("cells" => cells2,
+        "changedCellIds" => ["i_d"]))
+    @test r2.recomputed == ["i_d"]
+    vals2 = Dict(c.cellId => get(c, :value, nothing) for c in r2.cells)
+    @test vals2["i_c"] == "30"    # sin cambios
+    @test vals2["i_d"] == "9"
+
+    # 3) Rename a→q: los que usaban "a" deben re-evaluar (UNDEFINED_VAR)
+    cells3 = copy(cells2); cells3[1] = ex("i_a", ["Equal", "q", 3])
+    r3 = eval_document(Dict{String,Any}("cells" => cells3,
+        "changedCellIds" => ["i_a"]))
+    @test "i_b" in r3.recomputed
+    err3 = Dict(c.cellId => get(c, :error, nothing) for c in r3.cells)
+    @test err3["i_b"].code == "UNDEFINED_VAR"
+
+    # 4) Funciones de usuario: cambiar el cuerpo de g re-evalúa a sus usuarios
+    cells4 = [
+        ex("i_f1", ["Assign", "g", ["Function", ["Multiply", "x", 2], "x"]]),
+        ex("i_g1", ["InvisibleOperator", "g", ["Delimiter", 5]]),
+    ]
+    rf1 = eval_document(doc(cells4))
+    @test rf1.cells[2].value == "10"
+    cells5 = copy(cells4)
+    cells5[1] = ex("i_f1", ["Assign", "g", ["Function", ["Multiply", "x", 3], "x"]])
+    rf2 = eval_document(Dict{String,Any}("cells" => cells5,
+        "changedCellIds" => ["i_f1"]))
+    @test rf2.recomputed == ["i_f1", "i_g1"]
+    @test rf2.cells[2].value == "15"
+
+    # 5) settings.digits afecta al formato
+    rd = eval_document(Dict{String,Any}(
+        "cells" => [ex("i_pi", ["Multiply", "π", 1])],
+        "settings" => Dict("digits" => 4)))
+    @test rd.cells[1].value == "3.142"
 end
 
 @testset "plot_data — Fase 1: muestreo para uPlot" begin

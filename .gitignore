@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Engine Julia compilado (PackageCompiler.create_app — lo genera CI o tools/build-engine-app.jl)
+# El .gitkeep se commitea porque tauri-build exige que el glob de resources matchee algo
+src-tauri/engine-runtime/*
+!src-tauri/engine-runtime/.gitkeep

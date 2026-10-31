@@ -28,14 +28,26 @@ async fn eval_cell(
 
 /// Evalúa el documento COMPLETO en orden (Fase 1): variables y funciones de
 /// usuario se propagan entre celdas.
-/// Frontend: invoke("eval_document", { cells })
+/// `changedCellIds` (opcional) → evaluación incremental: solo re-evalúa las
+/// celdas afectadas y las que dependen de ellas (grafo en el engine).
+/// `settings.digits` (opcional) → dígitos significativos del formato.
+/// Frontend: invoke("eval_document", { cells, changedCellIds?, settings? })
 #[tauri::command]
 async fn eval_document(
     engine: tauri::State<'_, engine::Engine>,
     cells: Vec<Value>,
+    changed_cell_ids: Option<Vec<String>>,
+    settings: Option<Value>,
 ) -> Result<Value, String> {
     engine
-        .call("eval_document", serde_json::json!({ "cells": cells }))
+        .call(
+            "eval_document",
+            serde_json::json!({
+                "cells": cells,
+                "changedCellIds": changed_cell_ids,
+                "settings": settings,
+            }),
+        )
         .await
 }
 
@@ -127,12 +139,12 @@ async fn ping_engine(engine: tauri::State<'_, engine::Engine>) -> Result<Value, 
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
-            // El sidecar se spawnea al arrancar la app y vive con ella.
+            // El sidecar se spawnea al arrancar la app y vive con ella
+            // (watchdog en engine.rs lo vigila y reinicia).
             let handle = app.handle().clone();
             let engine = engine::Engine::spawn(&handle);
             app.manage(engine);
@@ -147,6 +159,15 @@ pub fn run() {
             engine_status,
             ping_engine
         ])
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
         .expect("error while running tauri application");
+
+    app.run(|handle, event| {
+        // Apagado ordenado del engine al salir (Fase 1: shutdown + kill)
+        if let tauri::RunEvent::Exit = event
+            && let Some(engine) = handle.try_state::<engine::Engine>()
+        {
+            engine.shutdown_blocking();
+        }
+    });
 }

@@ -19,6 +19,12 @@ export function Topbar({
   onNew,
   onOpen,
   onSave,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
+  theme,
+  onToggleTheme,
   evaluating,
 }: {
   engineLabel: { cls: string; text: string };
@@ -27,6 +33,12 @@ export function Topbar({
   onNew: () => void;
   onOpen: () => void;
   onSave: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  theme: "dark" | "light";
+  onToggleTheme: () => void;
   evaluating: boolean;
 }) {
   const docTitle = useDoc((s) => s.docTitle);
@@ -47,7 +59,32 @@ export function Topbar({
         </div>
       </div>
       <div className="tb-right">
-        <button className="btn btn-ghost" onClick={onNew} title="Nuevo documento (vacío)">
+        <button
+          className="btn btn-ghost"
+          onClick={onUndo}
+          disabled={!canUndo}
+          title="Deshacer (Ctrl+Z)"
+        >
+          ↶
+        </button>
+        <button
+          className="btn btn-ghost"
+          onClick={onRedo}
+          disabled={!canRedo}
+          title="Rehacer (Ctrl+Shift+Z)"
+        >
+          ↷
+        </button>
+        <span className="tb-sep" />
+        <button
+          className="btn btn-ghost"
+          onClick={onToggleTheme}
+          title={`Tema ${theme === "dark" ? "claro" : "oscuro"} (preferencia del documento)`}
+        >
+          {theme === "dark" ? "☀" : "☾"}
+        </button>
+        <span className="tb-sep" />
+        <button className="btn btn-ghost" onClick={onNew} title="Nuevo documento (vacío, Ctrl+N)">
           🗀 New
         </button>
         <button className="btn btn-ghost" onClick={onOpen} title="Abrir… (Ctrl+O)">

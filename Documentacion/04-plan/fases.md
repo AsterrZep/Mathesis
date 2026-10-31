@@ -30,26 +30,28 @@
 > **Progreso (31-oct-2026):** ✅ worksheet multi-celda con gutter numerado ·
 > ✅ variables encadenadas (`eval_document` + EvalCtx) · ✅ funciones de usuario
 > `f(x):=…` + llamadas · ✅ paleta de símbolos (insert en celda activa) ·
-> ✅ gráficos uPlot en inspector (`plot_data`: auto-plot al seleccionar,
-> rango editable, gaps de dominio) · ✅ **traductor MathJSON completo**
-> (trig completas + hiperbólicas + inversas, logs con base, Root, Factorial,
-> GCD/LCM/Mod, Floor/Ceil/Round/Sign, `Apply`/`InverseFunction`, nombres vía
-> `InvisibleOperator`: \exp \gcd \operatorname{sign}) · ✅ **PlotCell en la
-> hoja** (2 funciones, leyenda, zoom/pan) + **IntervalCell** (rango x) ·
-> ✅ **guardar/cargar JSON** (`doc_save`/`doc_open` con diálogo nativo
-> `tauri-plugin-dialog`; localStorage en navegador dev) · ✅ atajos
-> (Enter = nueva celda · Ctrl+S/O/N) · ✅ diseño Stitch implementado ·
-> ⬜ undo/redo · ⬜ evaluación incremental · ⬜ watchdog del sidecar ·
-> ⬜ persistencia de preferencias
+> ✅ gráficos uPlot en inspector + **PlotCell/IntervalCell en la hoja** ·
+> ✅ traductor MathJSON completo · ✅ guardar/cargar JSON (diálogo nativo) ·
+> ✅ atajos (Enter · Ctrl+S/O/N/Z/Y) · ✅ **undo/redo** (historial con
+> coalescencia de tecleo, snapshots por structural sharing) ·
+> ✅ **evaluación incremental** (grafo de dependencias + caché por celda en
+> Julia; `changedCellIds` re-evalúa solo afectados) · ✅ **watchdog** del
+> sidecar (ping 30s, reinicio backoff 1-2-4s ×3, eventos engine-status,
+> shutdown limpio, spawn vía tokio::process con resolución dev/release) ·
+> ✅ **preferencias del documento** (tema claro/oscuro + dígitos significativos,
+> persistidas en `doc.settings`) · ✅ **binarios precompilados en CI**
+> (PackageCompiler app relocatable empaquetada como resource; workflow
+> Release multiplataforma)
 >
-> Tests: **108 Julia + 33 vitest** · clippy limpio · CI · commits `8a4a511` + chunk gráficos/guardado
+> Tests: **126 Julia + 33 vitest** · clippy limpio · commits `8a4a511` +
+> `868a83c` + chunk 3
 
 **Objetivo:** documento real con fórmulas, resultados y gráficos 2D.
 
 ### Motor Julia
 - [x] Traductor MathJSON completo (~60 operadores: aritmética, trig, log, raíces, potencias)
 - [x] Entorno del documento: variables (`x = 2`), referencias entre celdas, funciones usuario `f(x):=…`
-- [ ] Evaluación incremental (re-evaluar solo celdas afectadas)
+- [x] Evaluación incremental (re-evaluar solo celdas afectadas — grafo + caché DOC_CACHE)
 - [x] Errores de dominio tipados (DIV_ZERO, UNDEFINED_VAR, DOMAIN, NAN, INFINITY, LATEX_INCOMPLETE…)
 - [x] `plot_data`: muestreo de funciones → arrays x/y (gaps `null` fuera de dominio)
 
@@ -60,13 +62,20 @@
 - [x] `PlotCell` con uPlot (2 funciones, grid, leyenda, zoom/pan) — celda en la hoja
 - [x] `IntervalCell` (rango de x para el plot: desde/hasta/pasos)
 - [x] Paleta de símbolos básica (fracción, potencia, √, ∫ Σ, griegas)
-- [ ] Undo/Redo (patches)
-- [x] Atajos de teclado (Enter, Ctrl+S, Ctrl+O, Ctrl+N)
+- [x] Undo/Redo (historial con coalescencia de tecleo; Ctrl+Z / Ctrl+Shift+Z)
+- [x] Atajos de teclado (Enter, Ctrl+S, Ctrl+O, Ctrl+N, Ctrl+Z/Y)
 
 ### Rust
 - [x] `doc_open`/`doc_save` (JSON) — diálogo nativo (`tauri-plugin-dialog`); `doc_new` en el frontend
-- [ ] Watchdog del sidecar + reinicio
-- [ ] Persistencia de preferencias (tema, dígitos)
+- [x] Watchdog del sidecar + reinicio (ping 30 s, backoff 1s/2s/4s ×3, eventos, shutdown limpio)
+- [x] Persistencia de preferencias (tema claro/oscuro + dígitos significativos en `doc.settings`)
+
+### CI / distribución (extra acordado)
+- [x] Engine empaquetable: `PackageCompiler.create_app` → `src-tauri/engine-runtime`
+      (relocatable, sin Julia instalada) + workload de precompilación
+- [x] Workflow **Release** (`.github/workflows/release.yml`): tag `v*` o manual →
+      Linux (AppImage/deb/rpm) · macOS arm64 (dmg) · Windows (NSIS/MSI), con cache
+      del sysimage y draft release con los instaladores
 
 **Criterio de salida:** documento con 10 fórmulas encadenadas + gráfico 2D de
 `sin(x)`, guardable y reabrible.

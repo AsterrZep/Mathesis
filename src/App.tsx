@@ -28,18 +28,33 @@ export default function App() {
   const setEvaluating = useDoc((s) => s.setEvaluating);
   const applyResult = useDoc((s) => s.applyResult);
   const addCell = useDoc((s) => s.addCell);
+  const undo = useDoc((s) => s.undo);
+  const redo = useDoc((s) => s.redo);
+  const canUndo = useDoc((s) => s.history.past.length > 0);
+  const canRedo = useDoc((s) => s.history.future.length > 0);
+  const settings = useDoc((s) => s.settings);
+  const toggleTheme = useDoc((s) => s.toggleTheme);
   const [status, setStatus] = useState<EngineStatus | null>(null);
   const seq = useRef(0);
 
-  // Estado del motor al arrancar + evento "engine-ready"
+  // Tema claro/oscuro del documento (settings.theme, persistido en el doc)
+  useEffect(() => {
+    document.documentElement.dataset.theme = settings.theme;
+  }, [settings.theme]);
+
+  // Estado del motor al arrancar + eventos del watchdog:
+  // "engine-ready" (hand-shake) y "engine-status" (restarted → re-evaluar)
   useEffect(() => {
     engineStatus().then(setStatus).catch(() => setStatus(null));
     if (!isTauri) return;
-    const unlisten = listen("engine-ready", () =>
-      engineStatus().then(setStatus),
-    );
+    const un1 = listen("engine-ready", () => engineStatus().then(setStatus));
+    const un2 = listen<{ reason?: string }>("engine-status", (e) => {
+      engineStatus().then(setStatus);
+      if (e.payload?.reason === "restarted") void runEvalRef.current();
+    });
     return () => {
-      unlisten.then((f) => f());
+      un1.then((f) => f());
+      un2.then((f) => f());
     };
   }, []);
 
@@ -47,18 +62,29 @@ export default function App() {
     const mySeq = ++seq.current;
     setEvaluating(true);
     try {
+      const s = useDoc.getState();
       // Solo math/text viajan a eval_document — plot/interval se muestrean
       // aparte vía plot_data desde sus propias celdas
-      const payload = useDoc.getState()
-        .cells.filter((c) => c.type === "math" || c.type === "text")
-        .map((c) => ({
-          cellId: c.id,
-          type: (c.type === "text" ? "text" : "expression") as
-            | "text"
-            | "expression",
-          latex: c.latex,
-        }));
-      const r = await evalDocument(payload);
+      const mathCells = s.cells.filter(
+        (c) => c.type === "math" || c.type === "text",
+      );
+      const payload = mathCells.map((c) => ({
+        cellId: c.id,
+        type: (c.type === "text" ? "text" : "expression") as
+          | "text"
+          | "expression",
+        latex: c.latex,
+      }));
+      // Incremental: si solo cambió una celda matemática, el engine re-evalúa
+      // solo ella + sus dependientes (grafo + caché en Julia)
+      const changed =
+        s.lastChangedId && mathCells.some((c) => c.id === s.lastChangedId)
+          ? [s.lastChangedId]
+          : undefined;
+      const r = await evalDocument(payload, {
+        changedCellIds: changed,
+        digits: s.settings.digits,
+      });
       // guard anti-race: solo aplicar si es la última petición
       if (mySeq === seq.current) applyResult(r);
     } catch (e) {
@@ -68,10 +94,19 @@ export default function App() {
     }
   }, [applyResult, setEvaluating]);
 
+  // El listener del watchdog necesita runEval sin re-registrar el effect
+  const runEvalRef = useRef(runEval);
+  runEvalRef.current = runEval;
+
   // ── Documento: guardar / abrir / nuevo (Fase 1: doc_save/doc_open) ──────
   const saveNow = useCallback(async () => {
     const s = useDoc.getState();
-    const doc: DocFile = { version: 1, title: s.docTitle, cells: s.cells };
+    const doc: DocFile = {
+      version: 1,
+      title: s.docTitle,
+      settings: s.settings,
+      cells: s.cells,
+    };
     const p = await docSave(s.filePath, doc);
     if (p) {
       s.setFilePath(p);
@@ -91,6 +126,7 @@ export default function App() {
     useDoc.getState().loadDoc(r.path, {
       version: 1,
       title: doc.title ?? "Untitled.math",
+      settings: doc.settings,
       cells: doc.cells,
     });
   }, []);
@@ -127,6 +163,21 @@ export default function App() {
         newNow();
         return;
       }
+      // Undo/Redo a nivel documento — dentro de un mathfield, MathLive tiene
+      // su propio undo y no se intercepta
+      if (mod && (key === "z" || key === "y")) {
+        const ae = document.activeElement as HTMLElement | null;
+        if (
+          ae &&
+          (ae.tagName === "MATH-FIELD" || ae.closest?.(".mathfield-host"))
+        ) {
+          return;
+        }
+        e.preventDefault();
+        if (key === "y" || e.shiftKey) redo();
+        else undo();
+        return;
+      }
       if (e.key === "Enter" && !mod) {
         const ae = document.activeElement as HTMLElement | null;
         // No interceptar mientras se escribe en un editor
@@ -148,13 +199,14 @@ export default function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [saveNow, openNow, newNow]);
+  }, [saveNow, openNow, newNow, undo, redo]);
 
-  // Debounce: re-evaluar el documento al cambiar cualquier celda
+  // Debounce: re-evaluar el documento al cambiar cualquier celda o los
+  // dígitos significativos (settings.digits → formato de Julia)
   useEffect(() => {
     const t = window.setTimeout(() => void runEval(), DEBOUNCE_MS);
     return () => window.clearTimeout(t);
-  }, [cells, runEval]);
+  }, [cells, runEval, settings.digits]);
 
   const chip =
     status === null
@@ -181,6 +233,12 @@ export default function App() {
         onNew={newNow}
         onOpen={() => void openNow()}
         onSave={() => void saveNow()}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        theme={settings.theme}
+        onToggleTheme={toggleTheme}
         evaluating={evaluating}
       />
       <div className="workbench">

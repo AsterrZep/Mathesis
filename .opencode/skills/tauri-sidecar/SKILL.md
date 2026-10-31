@@ -36,33 +36,23 @@ Target triple actual: `rustc --print host-tuple`.
 
 NUNCA exponer `shell:allow-execute` genérico al frontend.
 
-## 3. Spawn + lector NDJSON (Rust)
+## 3. Spawn + lector NDJSON (Rust) — ✅ implementado (tokio::process)
 
-```rust
-use tauri_plugin_shell::{ShellExt, process::{CommandEvent, Child}};
-use tauri_plugin_shell::process::CommandChild;
+`src-tauri/src/engine.rs` NO usa tauri-plugin-shell: spawnea con
+`tokio::process::Command` (restart natural para el watchdog + `kill_on_drop`
++ `CREATE_NO_WINDOW` en Windows). Resolución de la ruta del engine:
 
-pub fn spawn_engine(app: &tauri::AppHandle)
-    -> anyhow::Result<(mpsc::Receiver<String>, CommandChild)> {
-    let cmd = app.shell().sidecar("mathesis-engine")?;
-    let (mut rx, child) = cmd.spawn()?;
-    Ok((rx, child))
-}
+1. `MATHESIS_ENGINE` (env, override de dev/debug)
+2. Recurso empaquetado: `resource_dir()/engine-runtime/bin/mathesis-engine[.exe]` (release)
+3. Dev: `src-tauri/binaries/mathesis-engine-<TARGET_TRIPLE>` (wrapper bash con
+   juliaup; el triple se inyecta vía `build.rs` → `MATHESIS_HOST_TRIPLE`)
 
-// Lectura de stdout línea a línea:
-tauri::async_runtime::spawn(async move {
-    while let Some(event) = rx.recv().await {
-        if let CommandEvent::Stdout(bytes) = event {
-            for line in String::from_utf8_lossy(&bytes).lines() {
-                // cada línea es una respuesta JSON-RPC → resolver Promise pendiente por id
-            }
-        }
-        if let CommandEvent::Stderr(bytes) = event { /* log */ }
-    }
-});
-```
-
-Escritura al stdin del sidecar: `child.write(b"{\"jsonrpc\":...}\n")`.
+Lector de stdout: `BufReader::new(stdout).lines()` en un task de
+`tauri::async_runtime::spawn`; cada línea JSON enruta la respuesta por `id`
+al `oneshot` pendiente. EOF de stdout ⇒ proceso muerto ⇒ el watchdog reinicia.
+Escritura: `ChildStdin` guardado en `Mutex<Option<ChildStdin>>` — tomarlo con
+`.take()`, escribir (await) y devolverlo (el MutexGuard de std NO puede cruzar
+un await: rompe `Send`).
 
 ## 4. Patrón de cliente RPC (Rust)
 

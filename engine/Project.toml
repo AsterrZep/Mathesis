@@ -1,3 +1,6 @@
+name = "MathesisEngine"
+uuid = "1d879ebe-3887-46b8-a5c0-8c159ad56ae9"
+
 [deps]
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

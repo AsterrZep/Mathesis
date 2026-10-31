@@ -35,10 +35,20 @@ export interface Cell {
   interval?: IntervalConfig;
 }
 
+/** Preferencias del documento (persistidas en doc.settings, Fase 1) */
+export interface DocSettings {
+  theme: "dark" | "light";
+  /** dígitos significativos del formato numérico (lo aplica Julia) */
+  digits: number;
+}
+
+export const DEFAULT_SETTINGS: DocSettings = { theme: "dark", digits: 15 };
+
 /** Documento persistido (doc_save/doc_open) — formato JSON propio v1 */
 export interface DocFile {
   version: 1;
   title: string;
+  settings?: DocSettings;
   cells: Cell[];
 }
 
@@ -57,6 +67,21 @@ const SEED_CELLS: Cell[] = [
 
 const EMPTY_DOC_CELLS = (): Cell[] => [{ id: newId(), type: "math", latex: "" }];
 
+/** Snapshot de undo: refs al array (structural sharing → barato) */
+interface Snap {
+  cells: Cell[];
+  selectedId: string | null;
+}
+interface History {
+  past: Snap[];
+  future: Snap[];
+}
+const HISTORY_LIMIT = 100;
+const EMPTY_HISTORY: History = { past: [], future: [] };
+
+// Coalescencia del tecleo: varias teclas seguidas en la MISMA celda = 1 undo
+let lastEdit = { id: "" as string, t: 0 };
+
 interface DocState {
   docTitle: string;
   /** Ruta del archivo abierto/guardado (null = sin guardar aún) */
@@ -67,6 +92,11 @@ interface DocState {
   definitions: Record<string, number>;
   functions: string[];
   evaluating: boolean;
+  /** Preferencias (tema, dígitos) — se guardan en el documento */
+  settings: DocSettings;
+  /** Última celda matemática editada → evaluación incremental (null = completa) */
+  lastChangedId: string | null;
+  history: History;
 
   addCell: (afterIndex: number, type: CellType) => void;
   removeCell: (id: string) => void;
@@ -78,11 +108,21 @@ interface DocState {
   applyResult: (r: DocEvalResult) => void;
   setFilePath: (p: string | null) => void;
   setDocTitle: (t: string) => void;
+  setSettings: (patch: Partial<DocSettings>) => void;
+  toggleTheme: () => void;
+  undo: () => void;
+  redo: () => void;
   /** Carga un documento (ids regenerados → MathLive remonta limpio) */
   loadDoc: (path: string | null, doc: DocFile) => void;
   /** Documento nuevo vacío */
   newDoc: () => void;
 }
+
+/** Empuja el snapshot actual al historial de undo (antes de mutar). */
+const pushHistory = (s: DocState): History => ({
+  past: [...s.history.past, { cells: s.cells, selectedId: s.selectedId }].slice(-HISTORY_LIMIT),
+  future: [],
+});
 
 export const useDoc = create<DocState>((set) => ({
   docTitle: "Untitled.math",
@@ -95,6 +135,9 @@ export const useDoc = create<DocState>((set) => ({
   definitions: {},
   functions: [],
   evaluating: false,
+  settings: { ...DEFAULT_SETTINGS },
+  lastChangedId: null,
+  history: EMPTY_HISTORY,
 
   addCell: (afterIndex, type) =>
     set((s) => {
@@ -106,7 +149,7 @@ export const useDoc = create<DocState>((set) => ({
             : { id: newId(), type, latex: "" };
       const cells = [...s.cells];
       cells.splice(afterIndex + 1, 0, cell);
-      return { cells, selectedId: cell.id };
+      return { cells, selectedId: cell.id, history: pushHistory(s), lastChangedId: null };
     }),
 
   removeCell: (id) =>
@@ -114,24 +157,40 @@ export const useDoc = create<DocState>((set) => ({
       const cells = s.cells.filter((c) => c.id !== id);
       const results = { ...s.results };
       delete results[id];
-      return { cells, results };
+      return { cells, results, history: pushHistory(s), lastChangedId: null };
     }),
 
   setLatex: (id, latex) =>
-    set((s) => ({
-      cells: s.cells.map((c) => (c.id === id ? { ...c, latex } : c)),
-    })),
+    set((s) => {
+      const now = Date.now();
+      // Coalescencia: tecleo continuo en la misma celda → un solo undo
+      const coalesce = lastEdit.id === id && now - lastEdit.t < 800;
+      lastEdit = { id, t: now };
+      return {
+        cells: s.cells.map((c) => (c.id === id ? { ...c, latex } : c)),
+        history: coalesce ? s.history : pushHistory(s),
+        lastChangedId: id,
+      };
+    }),
 
   patchCell: (id, patch) =>
-    set((s) => ({
-      cells: s.cells.map((c) => {
+    set((s) => {
+      const target = s.cells.find((c) => c.id === id);
+      const cells = s.cells.map((c) => {
         if (c.id !== id) return c;
         const next = { ...c, ...patch };
         // MathField emite al montar: si nada cambia devolver la MISMA
         // referencia evita re-renders en cadena del documento
         return JSON.stringify(next) === JSON.stringify(c) ? c : next;
-      }),
-    })),
+      });
+      const changed = cells !== s.cells;
+      const isEvalCell = target?.type === "math" || target?.type === "text";
+      return {
+        cells,
+        history: changed ? pushHistory(s) : s.history,
+        lastChangedId: changed && isEvalCell ? id : s.lastChangedId,
+      };
+    }),
 
   setSelected: (id) => set({ selectedId: id }),
   setEvaluating: (b) => set({ evaluating: b }),
@@ -146,27 +205,78 @@ export const useDoc = create<DocState>((set) => ({
   setFilePath: (p) => set({ filePath: p }),
   setDocTitle: (t) => set({ docTitle: t }),
 
+  setSettings: (patch) =>
+    set((s) => ({ settings: { ...s.settings, ...patch }, lastChangedId: null })),
+
+  toggleTheme: () =>
+    set((s) => ({
+      settings: {
+        ...s.settings,
+        theme: s.settings.theme === "dark" ? "light" : "dark",
+      },
+      lastChangedId: null,
+    })),
+
+  undo: () =>
+    set((s) => {
+      const prev = s.history.past[s.history.past.length - 1];
+      if (!prev) return {};
+      return {
+        cells: prev.cells,
+        selectedId: prev.selectedId,
+        lastChangedId: null,
+        history: {
+          past: s.history.past.slice(0, -1),
+          future: [
+            { cells: s.cells, selectedId: s.selectedId },
+            ...s.history.future,
+          ].slice(0, HISTORY_LIMIT),
+        },
+      };
+    }),
+
+  redo: () =>
+    set((s) => {
+      const next = s.history.future[0];
+      if (!next) return {};
+      return {
+        cells: next.cells,
+        selectedId: next.selectedId,
+        lastChangedId: null,
+        history: {
+          past: [...s.history.past, { cells: s.cells, selectedId: s.selectedId }].slice(-HISTORY_LIMIT),
+          future: s.history.future.slice(1),
+        },
+      };
+    }),
+
   loadDoc: (path, doc) =>
     set(() => ({
       filePath: path,
       docTitle: doc.title || "Untitled.math",
+      settings: { ...DEFAULT_SETTINGS, ...(doc.settings ?? {}) },
       // ids nuevos: MathField monta con `initial` — ids frescos = remontaje limpio
       cells: (doc.cells ?? []).map((c) => ({ ...c, id: newId() })),
       selectedId: null,
       results: {},
       definitions: {},
       functions: [],
+      lastChangedId: null,
+      history: EMPTY_HISTORY,
     })),
 
   newDoc: () =>
     set(() => ({
       filePath: null,
       docTitle: "Untitled.math",
+      settings: { ...DEFAULT_SETTINGS },
       cells: EMPTY_DOC_CELLS(),
       selectedId: null,
       results: {},
       definitions: {},
       functions: [],
+      lastChangedId: null,
+      history: EMPTY_HISTORY,
     })),
 }));
 

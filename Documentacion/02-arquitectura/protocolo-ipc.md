@@ -46,12 +46,23 @@
 
 ### Evaluar documento completo (al cargar)
 
+`changedCellIds` (opcional) → **evaluación incremental**: el engine re-evalúa
+solo las celdas cambiadas + las que definen los mismos símbolos (sombreado) +
+las que usan sus símbolos, en cascada; el resto sale de la caché de la
+evaluación anterior (`recomputed` lista lo re-evaluado; `"all"` = completa).
+`settings.digits` configura los dígitos significativos del formato.
+
 ```json
-→ {"jsonrpc":"2.0","id":3,"method":"eval_document","params":{"doc":{...documento completo...}}}
+→ {"jsonrpc":"2.0","id":3,"method":"eval_document","params":{
+     "cells":[…],
+     "changedCellIds":["c7"],
+     "settings":{"digits":6}}}
 ← {"jsonrpc":"2.0","id":3,"result":{"cells":[
       {"cellId":"c1","status":"ok","value":"0.99","unit":"1"},
       {"cellId":"c2","status":"ok","value":"…","unit":"m"}
-   ]}}
+   ],
+   "definitions":{"a":2.0}, "functions":["f"],
+   "recomputed":["c7","c8"]}}
 ```
 
 ### Solicitar datos de un gráfico
@@ -110,8 +121,7 @@ ver esquema histórico más abajo — pendiente de la evaluación incremental.)
 | `hello` | protocolVersion, appVersion | engineVersion, julia |
 | `ping` | — | pong |
 | `eval_cell` | cellId, ast, env | status, value, unit, latex, type |
-| `eval_document` | doc | cells[] (resultados por celda) |
-| `eval_incremental` | changedCellIds, doc | cells[] (solo re-evaluados) |
+| `eval_document` | cells[], changedCellIds?, settings? | cells[], definitions, functions, recomputed |
 | `plot_data` | ast, xFrom, xTo, steps, varName, env | x[], y[] (null=gap), nonFinite |
 | `export` | kind(latex\|figure\|mathjax), doc/cellId, format, theme | mime, data |
 | `simplify` | ast | latex simplificado (para botón "simplificar") |
@@ -134,15 +144,19 @@ incompatible) **NO** son errores RPC: van en `result.status = "error"` con un
 código de dominio (`DIV_ZERO`, `UNIT_MISMATCH`…), para que la UI los pinte
 como "error en la celda", no como fallo del sistema.
 
-## Ciclo de vida y watchdog (lado Rust)
+## Ciclo de vida y watchdog (lado Rust) — ✅ implementado (Fase 1)
 
-1. Al abrir la app: `spawn(sidecar)` → espera `method:"ready"` (timeout 30 s)
-2. Heartbeat: `ping` cada 30 s; si no responde en 10 s → marcar muerto
-3. Si el sidecar muere:
-   - Reiniciarlo (máx. 3 intentos con backoff 1s/2s/4s)
-   - Re-enviar `eval_document` con el estado actual
-   - Si falla 3 veces → diálogo "el motor matemático no responde"
-4. Al cerrar la app: `shutdown` → SIGTERM → kill después de 2 s
+1. Al abrir la app: `spawn` con resolución de ruta (env `MATHESIS_ENGINE` →
+   recurso `engine-runtime/bin/mathesis-engine` (release) → wrapper dev
+   `binaries/mathesis-engine-<triple>`)
+2. Heartbeat: `ping` cada 30 s; si no responde en 10 s → muerto
+3. Si el sidecar muere (EOF de stdout o ping fallido): reinicio con backoff
+   1s/2s/4s (máx. 3); eventos al frontend: `engine-status`
+   (`{ready, reason: restarting|restarted|dead}`) y `engine-ready`;
+   al recibir `restarted` el frontend re-evalúa el documento
+4. Al cerrar la app: `shutdown` RPC (timeout 2 s) → kill
+5. Tras 3 fallos consecutivos de reinicio → evento `dead` (la UI muestra
+   "sin motor Julia"; el watchdog reintenta en el siguiente ciclo)
 
 ## Límites de evaluación (soft)
 
