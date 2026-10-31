@@ -39,8 +39,10 @@ fn unesc(s: &str) -> String {
     let bytes = s.as_bytes();
     let mut i = 0usize;
     while i < bytes.len() {
-        if bytes[i] == b'&' {
-            if let Some(rel) = s[i..].find(';') {
+        if bytes[i] == b'&'
+            && let Some(rel) = s[i..].find(';')
+        {
+            {
                 let ent = &s[i + 1..i + rel];
                 let decoded: Option<String> = if let Some(hex) = ent.strip_prefix('#') {
                     let code = hex
@@ -201,8 +203,8 @@ fn term_latex(t: &Term, warnings: &mut Vec<String>) -> String {
 
     // content:<link> → referencia al resultado de otra fórmula:
     // con argTerm → llamada f(x); sin arg → referencia simple
-    if code.starts_with("content:") {
-        let name = code["content:".len()..].rsplit('.').next().unwrap_or(code);
+    if let Some(rest) = code.strip_prefix("content:") {
+        let name = rest.rsplit('.').next().unwrap_or(code);
         return match child(t, "argTerm") {
             Some(arg) => format!("{}\\left({}\\right)", name, term_latex(arg, warnings)),
             None => name.to_string(),
