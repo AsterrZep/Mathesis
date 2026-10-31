@@ -99,7 +99,7 @@
 | Arranque del sidecar lento sin sysimage (dev) | Bajo | Aceptable en dev; lazy-start (arrancar al primer cálculo) |
 | Windows + stdio con sidecar | Medio | Probar pronto en Windows; fallback socket local (ADR-008) |
 | Rendimiento de evaluación incremental | Medio | Grafo de dependencias en Julia; medir con doc de 500 celdas |
-| Licencia (ADR-006) | Bloqueante release | Decidir en fase 2 |
+| ~~Licencia~~ | ~~Bloqueante release~~ | ✅ Resuelta: **GPL-3.0** (ADR-006, 30-oct-2026) |
 
 ## Hito de validación temprana (semana 1-2)
 

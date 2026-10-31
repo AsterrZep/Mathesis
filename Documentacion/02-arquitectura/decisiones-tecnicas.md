@@ -121,11 +121,15 @@ funciones no cubiertas por Symbolics, se extiende el diccionario.
 
 ---
 
-## ADR-006: Licencia — POR DECIDIR
+## ADR-006: Licencia — GPL-3.0
 
-**Estado:** Pendiente
+**Estado:** ✅ Aceptado (30-oct-2026 — decisión del usuario)
 **Contexto:** microMathematics es GPL-3.0. No copiamos código (reimplementamos),
 así que la licencia es en principio libre.
+
+**Decisión: GNU GPL-3.0** — elección voluntaria del usuario pese a no estar
+obligado, coherente con el espíritu open-source del proyecto y con el original.
+Archivo `LICENSE` en la raíz del repo.
 
 **Opciones:**
 | Opción | Ventaja | Riesgo |

@@ -60,4 +60,6 @@ Siguiente: Fase 1 (MVP) — ver [`Documentacion/04-plan/fases.md`](Documentacion
 
 ## Licencia
 
-Por decidir (ADR-006) — el original es GPL-3.0.
+**[GNU GPL-3.0](LICENSE)** — decisión del proyecto (30-oct-2026, ADR-006).
+Sin código copiado del original (reimplementación limpia desde cero), la GPL es
+una elección voluntaria alineada con microMathematics.

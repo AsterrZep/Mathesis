@@ -24,7 +24,7 @@ de unidades, gráficos 2D/3D, y exportación a LaTeX/imagen.
 | Gráficos | Híbrido: **uPlot/WebGL en frontend** para interactivo + **CairoMakie** en Julia para exportación de calidad publicación |
 | Formato de documento | **JSON propio** + importador `.mmt` del original |
 | Plataformas | Escritorio: Windows, macOS, Linux |
-| Licencia | **Por decidir** (ver `02-arquitectura/decisiones-tecnicas.md` → ADR-006) |
+| Licencia | **GNU GPL-3.0** (ADR-006, decidido 30-oct-2026) |
 
 ## 📁 Estructura de esta documentación
 
