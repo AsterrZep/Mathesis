@@ -7,8 +7,9 @@
 
 import { create } from "zustand";
 import { type DefinitionValue, type DocCellResult, type DocEvalResult } from "./engine";
+import { type DocAsset, ingestImage } from "./imageAsset";
 
-export type CellType = "math" | "text" | "plot" | "interval";
+export type CellType = "math" | "text" | "plot" | "interval" | "image";
 
 /** Config de celda de gráfico: 1-2 expresiones y la variable libre */
 export interface PlotConfig {
@@ -33,6 +34,8 @@ export interface Cell {
   plot?: PlotConfig;
   /** solo type="interval" */
   interval?: IntervalConfig;
+  /** solo type="image": id en doc.assets (dedup por hash) */
+  assetId?: string;
 }
 
 /** Preferencias del documento (persistidas en doc.settings, Fase 1) */
@@ -49,7 +52,23 @@ export interface DocFile {
   version: 1;
   title: string;
   settings?: DocSettings;
+  /** Assets embebidos (imágenes) — solo los referenciados se guardan (GC) */
+  assets?: Record<string, DocAsset>;
   cells: Cell[];
+}
+
+/** Assets referenciados por celdas de imagen → lo que viaja al disco */
+export function usedAssets(
+  cells: Cell[],
+  assets: Record<string, DocAsset>,
+): Record<string, DocAsset> {
+  const out: Record<string, DocAsset> = {};
+  for (const c of cells) {
+    if (c.type === "image" && c.assetId && assets[c.assetId]) {
+      out[c.assetId] = assets[c.assetId];
+    }
+  }
+  return out;
 }
 
 let seq = 0;
@@ -94,11 +113,17 @@ interface DocState {
   evaluating: boolean;
   /** Preferencias (tema, dígitos) — se guardan en el documento */
   settings: DocSettings;
+  /** Registro de imágenes del documento (dedup por hash de contenido) */
+  assets: Record<string, DocAsset>;
   /** Última celda matemática editada → evaluación incremental (null = completa) */
   lastChangedId: string | null;
   history: History;
 
   addCell: (afterIndex: number, type: CellType) => void;
+  /** Inserta celda de imagen referenciando asset (lo registra si hace falta) */
+  addImage: (afterIndex: number, assetId: string, asset: DocAsset) => void;
+  /** Registra un asset sin crear celda (no-op si ya existe) */
+  putAsset: (id: string, asset: DocAsset) => void;
   removeCell: (id: string) => void;
   setLatex: (id: string, latex: string) => void;
   /** Patch genérico (config plot/interval, latex…) — no-op si nada cambia */
@@ -136,6 +161,7 @@ export const useDoc = create<DocState>((set) => ({
   functions: [],
   evaluating: false,
   settings: { ...DEFAULT_SETTINGS },
+  assets: {},
   lastChangedId: null,
   history: EMPTY_HISTORY,
 
@@ -151,6 +177,21 @@ export const useDoc = create<DocState>((set) => ({
       cells.splice(afterIndex + 1, 0, cell);
       return { cells, selectedId: cell.id, history: pushHistory(s), lastChangedId: null };
     }),
+
+  addImage: (afterIndex, assetId, asset) =>
+    set((s) => {
+      const cell: Cell = { id: newId(), type: "image", latex: "", assetId };
+      const cells = [...s.cells];
+      cells.splice(afterIndex + 1, 0, cell);
+      // Solo se registra si no existía (dedup: la celda referencia el id)
+      const assets = s.assets[assetId]
+        ? s.assets
+        : { ...s.assets, [assetId]: asset };
+      return { cells, assets, selectedId: cell.id, history: pushHistory(s), lastChangedId: null };
+    }),
+
+  putAsset: (id, asset) =>
+    set((s) => (s.assets[id] ? {} : { assets: { ...s.assets, [id]: asset } })),
 
   removeCell: (id) =>
     set((s) => {
@@ -255,7 +296,9 @@ export const useDoc = create<DocState>((set) => ({
       filePath: path,
       docTitle: doc.title || "Untitled.math",
       settings: { ...DEFAULT_SETTINGS, ...(doc.settings ?? {}) },
+      assets: { ...(doc.assets ?? {}) },
       // ids nuevos: MathField monta con `initial` — ids frescos = remontaje limpio
+      // (los assetId de imagen se MANTIENEN: referencian doc.assets)
       cells: (doc.cells ?? []).map((c) => ({ ...c, id: newId() })),
       selectedId: null,
       results: {},
@@ -270,6 +313,7 @@ export const useDoc = create<DocState>((set) => ({
       filePath: null,
       docTitle: "Untitled.math",
       settings: { ...DEFAULT_SETTINGS },
+      assets: {},
       cells: EMPTY_DOC_CELLS(),
       selectedId: null,
       results: {},
@@ -283,4 +327,25 @@ export const useDoc = create<DocState>((set) => ({
 /** Cells → payload para invoke("eval_document") (las de texto van sin ast) */
 export function cellsForEval(cells: Cell[]): Record<string, unknown>[] {
   return cells.map((c) => ({ cellId: c.id, type: c.type === "text" ? "text" : "expression" }));
+}
+
+// ── Imágenes (Fase 2): ingestión file → registro dedup → celda ─────────────
+
+/**
+ * Inserta un fichero de imagen como celda DESPUÉS de `afterIndex`:
+ * hash → dedup (si ya existe solo se referencia) → compresión selectiva.
+ */
+export async function insertImageFile(file: File, afterIndex: number): Promise<void> {
+  const s = useDoc.getState();
+  const res = await ingestImage(file, (id) => Boolean(s.assets[id]));
+  if (!res.dedup) s.putAsset(res.id, res.asset);
+  s.addImage(afterIndex, res.id, res.asset);
+}
+
+/** Reemplaza la imagen de una celda existente (mismo pipeline de dedup). */
+export async function replaceImageCell(cellId: string, file: File): Promise<void> {
+  const s = useDoc.getState();
+  const res = await ingestImage(file, (id) => Boolean(s.assets[id]));
+  if (!res.dedup) s.putAsset(res.id, res.asset);
+  s.patchCell(cellId, { assetId: res.id });
 }

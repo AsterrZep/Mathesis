@@ -2,10 +2,10 @@
 // Documentacion/07-diseno/): topbar, paleta de símbolos, celdas,
 // inspector de scope, statusbar.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
-import { useDoc, type Cell } from "./store";
+import { replaceImageCell, useDoc, type Cell } from "./store";
 import { MathField } from "./MathField";
 import { insertIntoActive } from "./mathfield-registry";
 import {
@@ -14,6 +14,7 @@ import {
   parseCellAst,
   plotData,
 } from "./engine";
+import { assetUrl } from "./imageAsset";
 import { Plot2D } from "./Plot2D";
 
 // ── Topbar (brand ∫ + doc chip + pill engine + acciones) ─────────────────
@@ -217,13 +218,14 @@ export function CellRow({ cell, index }: { cell: Cell; index: number }) {
 
   return (
     <div
-      className={`cell ${selected ? "sel" : ""} ${cell.type === "text" ? "cell-text" : ""} ${cell.type === "plot" ? "cell-plot" : ""} ${cell.type === "interval" ? "cell-interval" : ""}`}
+      className={`cell ${selected ? "sel" : ""} ${cell.type === "text" ? "cell-text" : ""} ${cell.type === "plot" ? "cell-plot" : ""} ${cell.type === "interval" ? "cell-interval" : ""} ${cell.type === "image" ? "cell-image" : ""}`}
       onMouseDown={() => setSelected(cell.id)}
     >
       <div className="cell-gutter">
         <span className="cell-num">[{index + 1}]</span>
         {cell.type === "plot" && <span className="cell-badge">plot</span>}
         {cell.type === "interval" && <span className="cell-badge">x∈</span>}
+        {cell.type === "image" && <span className="cell-badge">img</span>}
         <button
           className="cell-del"
           title="Eliminar celda"
@@ -247,6 +249,8 @@ export function CellRow({ cell, index }: { cell: Cell; index: number }) {
             onChange={(e) => setLatex(cell.id, e.target.value)}
             onFocus={() => setSelected(cell.id)}
           />
+        ) : cell.type === "image" ? (
+          <ImageCell cell={cell} />
         ) : cell.type === "interval" ? (
           <IntervalControls cell={cell} />
         ) : (
@@ -280,6 +284,53 @@ export function CellRow({ cell, index }: { cell: Cell; index: number }) {
     </div>
   );
 }
+
+// ── Celda de imagen (Fase 2): asset por hash + render memoizado ────────────
+export const ImageCell = memo(function ImageCell({ cell }: { cell: Cell }) {
+  const asset = useDoc((s) => (cell.assetId ? s.assets[cell.assetId] : undefined));
+  const replaceRef = useRef<HTMLInputElement>(null);
+
+  if (!cell.assetId || !asset) {
+    return <div className="img-missing">⚠ Imagen ausente en el documento</div>;
+  }
+  return (
+    <div className="img-wrap">
+      {/* src memoizado por id: React no toca el DOM si no cambia → sin re-decode */}
+      <img
+        src={assetUrl(cell.assetId, asset)}
+        alt=""
+        loading="lazy"
+        draggable={false}
+      />
+      <div className="img-actions">
+        <button
+          className="btn btn-mini"
+          title="Reemplazar imagen"
+          onClick={(e) => {
+            e.stopPropagation();
+            replaceRef.current?.click();
+          }}
+        >
+          ⇄ Reemplazar
+        </button>
+        <span className="img-meta">
+          {asset.mime.replace("image/", "")} · {Math.max(1, Math.round(asset.bytes / 1024))} KB
+        </span>
+      </div>
+      <input
+        ref={replaceRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void replaceImageCell(cell.id, f);
+          e.target.value = "";
+        }}
+      />
+    </div>
+  );
+});
 
 // ── Celda de intervalo: rango x que usan los gráficos de debajo ───────────
 function IntervalControls({ cell }: { cell: Cell }) {

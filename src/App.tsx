@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { Topbar, SymbolPalette, CellRow, Inspector, StatusBar } from "./components";
-import { useDoc, type DocFile } from "./store";
+import { insertImageFile, useDoc, usedAssets, type DocFile } from "./store";
 import {
   type EngineStatus,
   docExport,
@@ -38,6 +38,42 @@ export default function App() {
   const toggleTheme = useDoc((s) => s.toggleTheme);
   const [status, setStatus] = useState<EngineStatus | null>(null);
   const seq = useRef(0);
+  const imgInputRef = useRef<HTMLInputElement>(null);
+
+  /** Índice donde insertar (tras la celda seleccionada, o al final) */
+  const insertIndex = useCallback(() => {
+    const s = useDoc.getState();
+    const i = s.cells.findIndex((c) => c.id === s.selectedId);
+    return i >= 0 ? i : s.cells.length - 1;
+  }, []);
+
+  const onPickImage = useCallback(
+    async (file: File | undefined | null) => {
+      if (!file) return;
+      await insertImageFile(file, insertIndex());
+    },
+    [insertIndex],
+  );
+
+  // Pegar imagen del portapapeles (Ctrl+V) → celda de imagen directa
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const it of items) {
+        if (it.kind === "file" && it.type.startsWith("image/")) {
+          const f = it.getAsFile();
+          if (f) {
+            e.preventDefault();
+            void onPickImage(f);
+          }
+          return;
+        }
+      }
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [onPickImage]);
 
   // Tema claro/oscuro del documento (settings.theme, persistido en el doc)
   useEffect(() => {
@@ -107,6 +143,8 @@ export default function App() {
       version: 1,
       title: s.docTitle,
       settings: s.settings,
+      // GC de assets: solo las imágenes referenciadas viajan al disco
+      assets: usedAssets(s.cells, s.assets),
       cells: s.cells,
     };
     const p = await docSave(s.filePath, doc);
@@ -129,6 +167,7 @@ export default function App() {
       version: 1,
       title: doc.title ?? "Untitled.math",
       settings: doc.settings,
+      assets: doc.assets,
       cells: doc.cells,
     });
   }, []);
@@ -290,11 +329,28 @@ export default function App() {
               ))}
             </div>
             <div className="add-block-row">
+              <input
+                ref={imgInputRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => {
+                  void onPickImage(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
               <button className="add-block" onClick={() => addCell(cells.length - 1, "math")}>
                 ＋ Add formula
               </button>
               <button className="add-block" onClick={() => addCell(cells.length - 1, "text")}>
                 ＋ Text block
+              </button>
+              <button
+                className="add-block"
+                title="Insertar imagen (o Ctrl+V para pegar del portapapeles)"
+                onClick={() => imgInputRef.current?.click()}
+              >
+                ＋ Image
               </button>
               <button
                 className="add-block"

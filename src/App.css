@@ -394,6 +394,28 @@ math-field.mf, .mathfield-host math-field {
 }
 .cell-interval .cell-body, .cell-plot .cell-body { flex: 1; }
 .add-block-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ── Celda de imagen (Fase 2) ───────────────────────────────────────────── */
+.img-wrap { width: 100%; position: relative; }
+.img-wrap img {
+  display: block; max-width: 100%; height: auto;
+  border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg-cell);
+}
+.img-actions {
+  display: flex; align-items: center; gap: 10px; margin-top: 6px;
+  opacity: 0; transition: opacity 0.12s ease;
+}
+.img-wrap:hover .img-actions { opacity: 1; }
+.img-meta {
+  font-family: var(--font-mono); font-size: 10px; color: var(--fg-muted);
+}
+.img-missing {
+  font-size: 12px; color: var(--error);
+  background: var(--bg-cell); border: 1px dashed var(--error);
+  border-radius: 8px; padding: 12px;
+}
+.cell-image .cell-body { flex: 1; }
 .insp-empty {
   background: var(--bg-cell); border: 1px dashed var(--border);
   border-radius: 8px; padding: 12px;

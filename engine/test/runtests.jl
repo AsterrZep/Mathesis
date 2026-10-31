@@ -505,11 +505,16 @@ end
                 "latex" => "f(2)", "ast" => ["InvisibleOperator", "f", ["Delimiter", 2]]),
             Dict{String,Any}("cellId" => "t1", "type" => "text",
                 "latex" => "Nota: 100% & se dibuja"),
+            Dict{String,Any}("cellId" => "im1", "type" => "image",
+                "latex" => "", "assetId" => "a1"),
             Dict{String,Any}("cellId" => "p1", "type" => "plot", "latex" => ""),
         ]))
     r = export_doc(payload)
     @test r.status == "ok" && r.mime == "application/x-latex"
     @test endswith(r.content, "\\end{document}\n")
+    # Imagen → comentario (no rompe el .tex); plot/interval → fuera
+    @test occursin("% [imagen: no representada en LaTeX", r.content)
+    @test !occursin("sin(x)", r.content)
     # Preámbulo + título escapado (underscore y % son peligrosos en LaTeX)
     @test occursin("\\documentclass[11pt]{article}", r.content)
     @test occursin("\\title{Mi doc\\_100\\%}", r.content)

@@ -96,10 +96,11 @@ publicada** (solo Linux: `.deb` + `.rpm`, PackageCompiler).
 
 > **Progreso (31-oct-2026):** ✅ **Unidades con Unitful** (núcleo) ·
 > ✅ **Unidades de información** custom · ✅ **Export LaTeX** (botón Export) ·
-> ⬜ imagen · ⬜ importador `.mmt` · ⬜ exports PNG/SVG · ⬜ ancho de texto ·
+> ✅ **Celda de imagen** (dedup SHA-256 + WebP selectivo + GC) ·
+> ⬜ importador `.mmt` · ⬜ exports PNG/SVG · ⬜ ancho de texto ·
 > ⬜ i18n · ✅ tema claro/oscuro (hecho en Fase 1)
 >
-> Tests: **173 Julia + 41 vitest**
+> Tests: **175 Julia + 49 vitest**
 
 - [x] **Unidades** (Unitful): parse de `5 m` (hoja `"m"` → cantidad), conversión
       `1 km → 1000 m` (`["To",…]`), errores de incompatibilidad (`UNIT_MISMATCH`),
@@ -108,7 +109,13 @@ publicada** (solo Linux: `.deb` + `.rpm`, PackageCompiler).
       definitions/plot env round-trip vía parser `"m s^-1"`, paleta con pestaña Units
 - [x] Unidades de información (bit/byte/kB/MB) — definiciones custom con dimensión
       propia (`@dimension` + `@refunit` + `@unit`; UnitfulBits no está en el registry)
-- [ ] Celda de **imagen** (embebida base64, como el original)
+- [x] Celda de **imagen** (embebida base64, como el original) — método optimizado:
+      registro `doc.assets` con **dedup por SHA-256** (misma imagen insertada N
+      veces = 1 copia), compresión selectiva a **WebP** (solo >300 KB, máx
+      1920 px, q0.85, si mejora ≥15 %; GIF/SVG intactos), base64 sin prefijo
+      `data:`, **GC al guardar** (solo assets referenciados), render memoizado
+      + `lazy`, alta por botón/**Ctrl+V**, reemplazo in-situ. En LaTeX exporta
+      como comentario (`% [imagen: …]`).
 - [ ] **Importador `.mmt`** (parser XML en Rust → nuestro JSON)
 - [x] Export **LaTeX** del documento (vía engine — `export` kind=latex + comando
       `doc_export` con diálogo nativo, resultados de Julia en cada fórmula,

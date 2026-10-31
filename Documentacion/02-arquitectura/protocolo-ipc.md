@@ -203,4 +203,8 @@ No pasan por JSON-RPC: son `invoke` directos de Tauri sobre el mismo estado.
 | `engine_status` | — | {ready, spawnError} | estado del sidecar |
 
 El formato del documento (`doc`) es el JSON propio v1:
-`{ version: 1, title, cells: [{id, type: "math"|"text"|"plot"|"interval", latex, plot?|interval?}] }`.
+`{ version: 1, title, settings?, assets?, cells: [{id, type: "math"|"text"|"plot"|"interval"|"image", latex, plot?|interval?|assetId?}] }`.
+
+`assets` = registro de imágenes embebidas `{<id>: {mime, bytes, data(base64 sin
+prefijo)}}` — el id es el SHA-256 del contenido (dedup) y **solo viajan los
+assets referenciados** por celdas (GC en `doc_save`).

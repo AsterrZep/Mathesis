@@ -38,11 +38,11 @@ function export_doc(params)
     cells === nothing && throw(MathError("INVALID_DOC", "Falta doc.cells"))
     title = string(pget(doc, :title, "Mathesis"))
 
-    # Solo celdas evaluables (text/expr) — plot/interval no representan en .tex
+    # Solo celdas evaluables (text/expr) — el resto se renderiza aparte
+    is_eval_type(t) = t in ("text", "expression", "equation", "math")
     eval_cells = Any[]
     for c in cells
-        t = string(pget(c, :type, "expression"))
-        t in ("text", "expression", "equation", "math") && push!(eval_cells, c)
+        is_eval_type(string(pget(c, :type, "expression"))) && push!(eval_cells, c)
     end
 
     # Resultados reales (Julia): evalúa el doc en orden con sus ast
@@ -58,8 +58,17 @@ function export_doc(params)
         "\\maketitle",
     ]
 
-    for (c, res) in zip(eval_cells, edoc.cells)
+    # Iterador de resultados alineado con eval_cells; se recorre el doc
+    # COMPLETO para dejar comentario de las imágenes y saltar plot/interval
+    results = Iterators.Stateful(edoc.cells)
+    for c in cells
         ctype = string(pget(c, :type, "expression"))
+        if ctype == "image"
+            push!(lines, "% [imagen: no representada en LaTeX — extraer de doc.assets]")
+            continue
+        end
+        is_eval_type(ctype) || continue   # plot/interval → fuera
+        res = popfirst!(results)
         latex = string(pget(c, :latex, ""))
         if ctype == "text"
             isempty(strip(latex)) && continue
