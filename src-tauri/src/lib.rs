@@ -220,7 +220,7 @@ async fn save_artifact(
     let (tx, rx) = tokio::sync::oneshot::channel();
     app.dialog()
         .file()
-        .add_filter(&format!("Gráfico {ext}"), &[ext.as_str()])
+        .add_filter(format!("Gráfico {ext}"), &[ext.as_str()])
         .set_file_name(&filename)
         .save_file(move |p| {
             let _ = tx.send(p.map(|f| f.to_string()));
