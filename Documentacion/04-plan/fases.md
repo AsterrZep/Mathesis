@@ -80,6 +80,11 @@
       · Assets: `.deb` (Debian/Ubuntu) + `.rpm` · 390 MB (runtime PackageCompiler completo —
       optimizar en Fase 4) · AppImage pendiente: `linuxdeploy` falla en el runner
       (fallback a deb/rpm activo; debug con `--verbose`)
+- [x] **🚀 Release `v0.1.1` publicada** (31-oct-2026) →
+      https://github.com/AsterrZep/Mathesis/releases/tag/v0.1.1
+      · `.deb`/`.rpm` 226 MB (−42 % con strip) · fixes de la laptop (M-3 pantalla negra,
+      M-4 sonidos, `julia_main` Cint) · **incluye unidades Unitful + export LaTeX** ·
+      versiones sincronizadas · engine cacheado en CI para próximos tags
 
 **Criterio de salida:** documento con 10 fórmulas encadenadas + gráfico 2D de
 `sin(x)`, guardable y reabrible. ✅ **cumplido** (31-oct-2026): celda plot con
