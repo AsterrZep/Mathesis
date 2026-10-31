@@ -97,10 +97,11 @@ publicada** (solo Linux: `.deb` + `.rpm`, PackageCompiler).
 > **Progreso (31-oct-2026):** ✅ **Unidades con Unitful** (núcleo) ·
 > ✅ **Unidades de información** custom · ✅ **Export LaTeX** (botón Export) ·
 > ✅ **Celda de imagen** (dedup SHA-256 + WebP selectivo + GC) ·
-> ⬜ importador `.mmt` · ⬜ exports PNG/SVG · ⬜ ancho de texto ·
-> ⬜ i18n · ✅ tema claro/oscuro (hecho en Fase 1)
+> ✅ **Importador `.mmt`** (parser XML en Rust, botón ⤒ Import) ·
+> ⬜ exports PNG/SVG · ⬜ ancho de texto · ⬜ i18n ·
+> ✅ tema claro/oscuro (hecho en Fase 1)
 >
-> Tests: **175 Julia + 49 vitest**
+> Tests: **175 Julia + 49 vitest + 4 cargo**
 
 - [x] **Unidades** (Unitful): parse de `5 m` (hoja `"m"` → cantidad), conversión
       `1 km → 1000 m` (`["To",…]`), errores de incompatibilidad (`UNIT_MISMATCH`),
@@ -116,7 +117,13 @@ publicada** (solo Linux: `.deb` + `.rpm`, PackageCompiler).
       `data:`, **GC al guardar** (solo assets referenciados), render memoizado
       + `lazy`, alta por botón/**Ctrl+V**, reemplazo in-situ. En LaTeX exporta
       como comentario (`% [imagen: …]`).
-- [ ] **Importador `.mmt`** (parser XML en Rust → nuestro JSON)
+- [x] **Importador `.mmt`** (parser XML en Rust → nuestro JSON) — `src-tauri/src/mmt.rs`
+      con `quick-xml`: `<term>`→LaTeX directo (tabla code→LaTeX, sin formato
+      intermedio), definiciones `f(x)`→`:=`, `content:<link>`→`f(x)`,
+      `equidistant_interval`→IntervalCell (rangos simbólicos `-ξ` resueltos por
+      `evalCell` en el plot), `plot_function`→PlotCell, `image_fragment` CDATA
+      → celda imagen con dedup, celdas desconocidas → warning. Botón
+      **⤒ Import** + `doc_import` (diálogo nativo). 4 tests cargo
 - [x] Export **LaTeX** del documento (vía engine — `export` kind=latex + comando
       `doc_export` con diálogo nativo, resultados de Julia en cada fórmula,
       texto escapado; botón Export del topbar activo)

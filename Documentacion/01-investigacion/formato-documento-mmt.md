@@ -2,6 +2,12 @@
 
 > Usado para el **importador** (fase 2+). Documentado con un ejemplo real:
 > `examples/function_plot.mmt` del repo original.
+>
+> **✅ Implementado en `src-tauri/src/mmt.rs`** (comando Tauri `doc_import`,
+> botón ⤒ Import). Decisiones: `<term>`→LaTeX directo; `f(x)=…` del original
+> se importa como `:=` (así lo acepta nuestro engine); `equidistant_interval`
+> → IntervalCell con rangos simbólicos (`-ξ`) resueltos por `evalCell` en el
+> plot; imágenes CDATA → assets con dedup; celdas desconocidas → warning.
 
 ## Estructura general
 

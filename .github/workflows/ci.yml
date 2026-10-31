@@ -45,6 +45,9 @@ jobs:
         working-directory: src-tauri
       - run: cargo check
         working-directory: src-tauri
+      - name: Tests Rust (parser .mmt, etc.)
+        run: cargo test --lib
+        working-directory: src-tauri
 
   engine:
     name: Engine Julia (tests)

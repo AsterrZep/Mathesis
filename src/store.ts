@@ -43,6 +43,14 @@ export interface DocSettings {
   theme: "dark" | "light";
   /** dígitos significativos del formato numérico (lo aplica Julia) */
   digits: number;
+  /** ancho de texto (heredado de .mmt textWidth, Fase 2) */
+  textWidth?: number;
+}
+
+/** Metadatos importados de .mmt (opcionales) */
+export interface DocMeta {
+  author?: string;
+  description?: string;
 }
 
 export const DEFAULT_SETTINGS: DocSettings = { theme: "dark", digits: 15 };
@@ -52,6 +60,7 @@ export interface DocFile {
   version: 1;
   title: string;
   settings?: DocSettings;
+  meta?: DocMeta;
   /** Assets embebidos (imágenes) — solo los referenciados se guardan (GC) */
   assets?: Record<string, DocAsset>;
   cells: Cell[];
@@ -115,6 +124,8 @@ interface DocState {
   settings: DocSettings;
   /** Registro de imágenes del documento (dedup por hash de contenido) */
   assets: Record<string, DocAsset>;
+  /** Metadatos (author/description) importados de .mmt — se conservan al guardar */
+  meta?: DocMeta;
   /** Última celda matemática editada → evaluación incremental (null = completa) */
   lastChangedId: string | null;
   history: History;
@@ -162,6 +173,7 @@ export const useDoc = create<DocState>((set) => ({
   evaluating: false,
   settings: { ...DEFAULT_SETTINGS },
   assets: {},
+  meta: undefined,
   lastChangedId: null,
   history: EMPTY_HISTORY,
 
@@ -296,6 +308,7 @@ export const useDoc = create<DocState>((set) => ({
       filePath: path,
       docTitle: doc.title || "Untitled.math",
       settings: { ...DEFAULT_SETTINGS, ...(doc.settings ?? {}) },
+      meta: doc.meta,
       assets: { ...(doc.assets ?? {}) },
       // ids nuevos: MathField monta con `initial` — ids frescos = remontaje limpio
       // (los assetId de imagen se MANTIENEN: referencian doc.assets)
@@ -314,6 +327,7 @@ export const useDoc = create<DocState>((set) => ({
       docTitle: "Untitled.math",
       settings: { ...DEFAULT_SETTINGS },
       assets: {},
+      meta: undefined,
       cells: EMPTY_DOC_CELLS(),
       selectedId: null,
       results: {},

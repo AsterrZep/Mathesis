@@ -11,6 +11,7 @@ import { insertIntoActive } from "./mathfield-registry";
 import {
   type DefinitionValue,
   type PlotData,
+  evalCell,
   parseCellAst,
   plotData,
 } from "./engine";
@@ -24,6 +25,7 @@ export function Topbar({
   onRun,
   onNew,
   onOpen,
+  onImport,
   onSave,
   onExport,
   onUndo,
@@ -39,6 +41,7 @@ export function Topbar({
   onRun: () => void;
   onNew: () => void;
   onOpen: () => void;
+  onImport: () => void;
   onSave: () => void;
   onExport: () => void;
   onUndo: () => void;
@@ -97,6 +100,13 @@ export function Topbar({
         </button>
         <button className="btn btn-ghost" onClick={onOpen} title="Abrir… (Ctrl+O)">
           📂 Open
+        </button>
+        <button
+          className="btn btn-ghost"
+          onClick={onImport}
+          title="Importar documento .mmt del microMathematics (Fase 2)"
+        >
+          ⤒ Import
         </button>
         <button className="btn btn-ghost" onClick={onSave} title="Guardar (Ctrl+S)">
           💾 Save
@@ -372,28 +382,52 @@ function PlotControls({ cell }: { cell: Cell }) {
   const patchCell = useDoc((s) => s.patchCell);
   const cfg = cell.plot ?? { f1: "", f2: "", varName: "x" };
 
-  // Rango: último intervalo ANTES de esta celda (si no, -10..10)
+  // Rango: último intervalo ANTES de esta celda (si no, -10..10). Los valores
+  // pueden ser EXPRESIONES (import .mmt: "-ξ") → se resuelven con evalCell.
   const idx = cells.findIndex((c) => c.id === cell.id);
   const iv = [...cells.slice(0, Math.max(idx, 0))]
     .reverse()
     .find((c) => c.type === "interval" && c.interval);
-  const from = Number(iv?.interval?.from ?? -10);
-  const to = Number(iv?.interval?.to ?? 10);
-  const steps = Number(iv?.interval?.steps ?? 400);
+  const rawFrom = iv?.interval?.from ?? "-10";
+  const rawTo = iv?.interval?.to ?? "10";
+  const rawSteps = iv?.interval?.steps ?? 400;
 
   const [state, setState] = useState<"idle" | "loading" | "ok" | "error">("idle");
-  const [data, setData] = useState<{ x: number[]; series: { id: string; y: (number | null)[] }[]; nonFinite: number } | null>(null);
+  const [data, setData] = useState<{ x: number[]; series: { id: string; y: (number | null)[] }[]; nonFinite: number; range: [string, string] } | null>(null);
   const [errMsg, setErrMsg] = useState("");
+
+  /** Número directo, o expresión resuelta por el engine (p.ej. "-ξ") */
+  const resolveNum = async (raw: string, fallback: number): Promise<number> => {
+    const t = raw.trim();
+    if (!t) return fallback;
+    const n = Number(t);
+    if (Number.isFinite(n)) return n;
+    const ast = parseCellAst(t);
+    if (!ast) return fallback;
+    try {
+      const r = await evalCell("range", ast, useDoc.getState().definitions);
+      if (r.status === "ok") {
+        const v = Number(r.value);
+        if (Number.isFinite(v)) return v;
+      }
+    } catch {
+      // sin engine (mock/navegador) → fallback
+    }
+    return fallback;
+  };
 
   const doPlot = async () => {
     const slots = [cfg.f1, cfg.f2].filter((f) => f.trim());
-    if (slots.length === 0 || !Number.isFinite(from) || !Number.isFinite(to)) {
+    if (slots.length === 0) {
       setData(null);
       setState("idle");
       return;
     }
     setState("loading");
     try {
+      const from = await resolveNum(rawFrom, -10);
+      const to = await resolveNum(rawTo, 10);
+      const steps = Math.max(2, Math.min(5000, Number(rawSteps) || 400));
       let baseX: number[] | null = null;
       const series: { id: string; y: (number | null)[] }[] = [];
       let nonFinite = 0;
@@ -411,7 +445,7 @@ function PlotControls({ cell }: { cell: Cell }) {
         setState("idle");
         return;
       }
-      setData({ x: baseX, series, nonFinite });
+      setData({ x: baseX, series, nonFinite, range: [rawFrom, rawTo] });
       setState("ok");
     } catch (e) {
       setErrMsg(e instanceof Error ? e.message : String(e));
@@ -424,7 +458,7 @@ function PlotControls({ cell }: { cell: Cell }) {
     const t = window.setTimeout(() => void doPlot(), 500);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cfg.f1, cfg.f2, cfg.varName, from, to, steps, definitions]);
+  }, [cfg.f1, cfg.f2, cfg.varName, rawFrom, rawTo, rawSteps, definitions]);
 
   return (
     <div className="plot-cell-body">
@@ -458,7 +492,7 @@ function PlotControls({ cell }: { cell: Cell }) {
           <Plot2D x={data.x} series={data.series} />
           <div className="plot-meta">
             <span>
-              x ∈ [{from}, {to}] · {data.x.length} pts
+              x ∈ [{data.range[0]}, {data.range[1]}] · {data.x.length} pts
             </span>
             {data.nonFinite > 0 && (
               <span className="plot-gaps">● {data.nonFinite} fuera de dominio (gap)</span>

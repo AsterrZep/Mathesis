@@ -1,6 +1,7 @@
 // Mathesis — núcleo Tauri
 // Comandos expuestos al frontend + ciclo de vida del sidecar Julia.
 mod engine;
+mod mmt;
 
 use serde_json::Value;
 use tauri::Manager;
@@ -170,6 +171,32 @@ async fn doc_export(
     Ok(Some(target))
 }
 
+/// Importa un documento `.mmt` (XML del microMathematics original) → JSON v1.
+/// Devuelve { path, doc, warnings } — NO escribe disco: el frontend carga con
+/// loadDoc(null, …) y el usuario guarda como JSON cuando quiera.
+/// Frontend: invoke("doc_import") → {path, doc, warnings} | null
+#[tauri::command]
+async fn doc_import(app: tauri::AppHandle) -> Result<Option<Value>, String> {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    app.dialog()
+        .file()
+        .add_filter("Documento microMathematics (.mmt)", &["mmt", "xml"])
+        .pick_file(move |p| {
+            let _ = tx.send(p);
+        });
+    let Some(fp) = rx.await.ok().flatten() else {
+        return Ok(None);
+    };
+    let path = fp.to_string();
+    let text = std::fs::read_to_string(&path).map_err(|e| format!("No se pudo leer: {e}"))?;
+    let imported = mmt::import_mmt(&text).map_err(|e| format!("Error importando .mmt: {e}"))?;
+    Ok(Some(serde_json::json!({
+        "path": path,
+        "doc": imported.doc,
+        "warnings": imported.warnings,
+    })))
+}
+
 /// Estado del sidecar: { ready, spawnError }
 #[tauri::command]
 fn engine_status(engine: tauri::State<'_, engine::Engine>) -> Value {
@@ -209,6 +236,7 @@ pub fn run() {
             plot_data,
             doc_save,
             doc_open,
+            doc_import,
             doc_export,
             engine_status,
             ping_engine

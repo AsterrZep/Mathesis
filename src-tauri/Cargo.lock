@@ -1988,6 +1988,7 @@ dependencies = [
 name = "mathesis"
 version = "0.1.1"
 dependencies = [
+ "quick-xml",
  "serde",
  "serde_json",
  "tauri",

@@ -12,6 +12,7 @@ import { insertImageFile, useDoc, usedAssets, type DocFile } from "./store";
 import {
   type EngineStatus,
   docExport,
+  docImport,
   docOpen,
   docSave,
   engineStatus,
@@ -143,6 +144,7 @@ export default function App() {
       version: 1,
       title: s.docTitle,
       settings: s.settings,
+      meta: s.meta,
       // GC de assets: solo las imágenes referenciadas viajan al disco
       assets: usedAssets(s.cells, s.assets),
       cells: s.cells,
@@ -181,6 +183,36 @@ export default function App() {
       return;
     }
     s.newDoc();
+  }, []);
+
+  // ── Import .mmt (Fase 2): XML del original → JSON v1 → loadDoc sin guardar ─
+  const importNow = useCallback(async () => {
+    try {
+      const r = await docImport();
+      if (!r) return; // cancelado
+      const doc = r.doc as Partial<DocFile> | null;
+      if (!doc || !Array.isArray(doc.cells)) {
+        window.alert("El .mmt no tiene celdas reconocibles.");
+        return;
+      }
+      // filePath = null a propósito: el .mmt NO es nuestro JSON — al guardar
+      // se ofrecerá "Guardar como"
+      useDoc.getState().loadDoc(null, {
+        version: 1,
+        title: doc.title ?? "Importado",
+        settings: doc.settings,
+        meta: doc.meta,
+        assets: doc.assets,
+        cells: doc.cells,
+      });
+      if (r.warnings.length > 0) {
+        const shown = r.warnings.slice(0, 8).join("\n• ");
+        const more = r.warnings.length > 8 ? `\n(+${r.warnings.length - 8} más)` : "";
+        window.alert(`Importado con avisos:\n• ${shown}${more}`);
+      }
+    } catch (e) {
+      window.alert(`No se pudo importar: ${e instanceof Error ? e.message : e}`);
+    }
   }, []);
 
   // ── Export (Fase 2): latex + ast → engine genera el .tex → diálogo nativo ─
@@ -294,6 +326,7 @@ export default function App() {
         onRun={() => void runEval()}
         onNew={newNow}
         onOpen={() => void openNow()}
+        onImport={() => void importNow()}
         onSave={() => void saveNow()}
         onExport={() => void exportNow()}
         onUndo={undo}

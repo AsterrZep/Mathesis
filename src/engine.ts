@@ -193,6 +193,20 @@ export async function docOpen(): Promise<OpenedDoc | null> {
   }
 }
 
+export interface DocImportResult {
+  path: string;
+  doc: unknown;
+  warnings: string[];
+}
+
+/** Importa un `.mmt` (XML del original) → JSON v1 (NO escribe disco). */
+export async function docImport(): Promise<DocImportResult | null> {
+  if (isTauri) {
+    return await invoke<DocImportResult | null>("doc_import");
+  }
+  throw new Error("Import .mmt solo disponible en la app de escritorio");
+}
+
 /**
  * Exporta el documento (Fase 2: `latex` → .tex con resultados evaluados por
  * Julia). El doc debe llevar las celdas CON `ast` (parse canonical:false) y
