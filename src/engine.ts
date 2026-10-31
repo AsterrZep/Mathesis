@@ -143,3 +143,37 @@ export async function engineStatus(): Promise<EngineStatus> {
   }
   return { ready: true, spawnError: null };
 }
+
+// ── Persistencia de documentos (Fase 1: doc_save / doc_open) ──────────────
+// En Tauri: comandos Rust con diálogo nativo (tauri-plugin-dialog).
+// Sin Tauri (vite dev en navegador): localStorage como sustituto.
+
+const LS_KEY = "mathesis-doc";
+
+export interface OpenedDoc {
+  path: string;
+  doc: unknown;
+}
+
+/** Guarda el documento; con path=null pide "Guardar como" nativo. */
+export async function docSave(path: string | null, doc: unknown): Promise<string | null> {
+  if (isTauri) {
+    return await invoke<string | null>("doc_save", { path, doc });
+  }
+  localStorage.setItem(LS_KEY, JSON.stringify(doc));
+  return path ?? "navegador:localStorage";
+}
+
+/** Abre un documento con el diálogo nativo (null si cancela). */
+export async function docOpen(): Promise<OpenedDoc | null> {
+  if (isTauri) {
+    return await invoke<OpenedDoc | null>("doc_open");
+  }
+  const raw = localStorage.getItem(LS_KEY);
+  if (!raw) return null;
+  try {
+    return { path: "navegador:localStorage", doc: JSON.parse(raw) };
+  } catch {
+    return null;
+  }
+}

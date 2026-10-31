@@ -8,9 +8,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { Topbar, SymbolPalette, CellRow, Inspector, StatusBar } from "./components";
-import { useDoc } from "./store";
+import { useDoc, type DocFile } from "./store";
 import {
   type EngineStatus,
+  docOpen,
+  docSave,
   engineStatus,
   evalDocument,
   isTauri,
@@ -45,13 +47,17 @@ export default function App() {
     const mySeq = ++seq.current;
     setEvaluating(true);
     try {
-      const payload = useDoc.getState().cells.map((c) => ({
-        cellId: c.id,
-        type: (c.type === "text" ? "text" : "expression") as
-          | "text"
-          | "expression",
-        latex: c.latex,
-      }));
+      // Solo math/text viajan a eval_document — plot/interval se muestrean
+      // aparte vía plot_data desde sus propias celdas
+      const payload = useDoc.getState()
+        .cells.filter((c) => c.type === "math" || c.type === "text")
+        .map((c) => ({
+          cellId: c.id,
+          type: (c.type === "text" ? "text" : "expression") as
+            | "text"
+            | "expression",
+          latex: c.latex,
+        }));
       const r = await evalDocument(payload);
       // guard anti-race: solo aplicar si es la última petición
       if (mySeq === seq.current) applyResult(r);
@@ -61,6 +67,88 @@ export default function App() {
       if (mySeq === seq.current) setEvaluating(false);
     }
   }, [applyResult, setEvaluating]);
+
+  // ── Documento: guardar / abrir / nuevo (Fase 1: doc_save/doc_open) ──────
+  const saveNow = useCallback(async () => {
+    const s = useDoc.getState();
+    const doc: DocFile = { version: 1, title: s.docTitle, cells: s.cells };
+    const p = await docSave(s.filePath, doc);
+    if (p) {
+      s.setFilePath(p);
+      const base = p.split(/[\\/]/).pop();
+      if (base) s.setDocTitle(base);
+    }
+  }, []);
+
+  const openNow = useCallback(async () => {
+    const r = await docOpen();
+    if (!r) return;
+    const doc = r.doc as Partial<DocFile> | null;
+    if (!doc || !Array.isArray(doc.cells)) {
+      console.warn("doc_open: formato no reconocido", r);
+      return;
+    }
+    useDoc.getState().loadDoc(r.path, {
+      version: 1,
+      title: doc.title ?? "Untitled.math",
+      cells: doc.cells,
+    });
+  }, []);
+
+  const newNow = useCallback(() => {
+    const s = useDoc.getState();
+    if (
+      s.cells.length > 1 &&
+      !window.confirm("¿Documento nuevo? Se descartan los cambios sin guardar.")
+    ) {
+      return;
+    }
+    s.newDoc();
+  }, []);
+
+  // Atajos: Ctrl/Cmd+S guardar · Ctrl/Cmd+O abrir · Ctrl/Cmd+N nuevo ·
+  // Enter (fuera de un editor) = nueva fórmula debajo de la seleccionada
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey;
+      const key = e.key.toLowerCase();
+      if (mod && key === "s") {
+        e.preventDefault();
+        void saveNow();
+        return;
+      }
+      if (mod && key === "o") {
+        e.preventDefault();
+        void openNow();
+        return;
+      }
+      if (mod && key === "n") {
+        e.preventDefault();
+        newNow();
+        return;
+      }
+      if (e.key === "Enter" && !mod) {
+        const ae = document.activeElement as HTMLElement | null;
+        // No interceptar mientras se escribe en un editor
+        if (
+          ae &&
+          (ae.tagName === "INPUT" ||
+            ae.tagName === "TEXTAREA" ||
+            ae.tagName === "MATH-FIELD" ||
+            ae.closest?.(".mathfield-host"))
+        ) {
+          return;
+        }
+        const s = useDoc.getState();
+        const i = s.cells.findIndex((c) => c.id === s.selectedId);
+        if (i < 0) return;
+        e.preventDefault();
+        s.addCell(i, "math");
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [saveNow, openNow, newNow]);
 
   // Debounce: re-evaluar el documento al cambiar cualquier celda
   useEffect(() => {
@@ -90,6 +178,9 @@ export default function App() {
         engineLabel={chip}
         onInsert={onInsert}
         onRun={() => void runEval()}
+        onNew={newNow}
+        onOpen={() => void openNow()}
+        onSave={() => void saveNow()}
         evaluating={evaluating}
       />
       <div className="workbench">
@@ -116,12 +207,28 @@ export default function App() {
                 <CellRow key={c.id} cell={c} index={i} />
               ))}
             </div>
-            <button
-              className="add-block"
-              onClick={() => addCell(cells.length - 1, "math")}
-            >
-              ＋ Add formula or text block
-            </button>
+            <div className="add-block-row">
+              <button className="add-block" onClick={() => addCell(cells.length - 1, "math")}>
+                ＋ Add formula
+              </button>
+              <button className="add-block" onClick={() => addCell(cells.length - 1, "text")}>
+                ＋ Text block
+              </button>
+              <button
+                className="add-block"
+                title="Rango x para los gráficos de debajo"
+                onClick={() => addCell(cells.length - 1, "interval")}
+              >
+                ＋ Interval
+              </button>
+              <button
+                className="add-block"
+                title="Gráfico 2D (1-2 expresiones, muestreo en Julia)"
+                onClick={() => addCell(cells.length - 1, "plot")}
+              >
+                ＋ Plot
+              </button>
+            </div>
           </div>
         </main>
         <Inspector />

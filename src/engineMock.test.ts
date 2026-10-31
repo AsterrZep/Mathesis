@@ -168,6 +168,113 @@ describe("mockEvalDocument — variables encadenadas", () => {
   });
 });
 
+// Fase 1: catálogo ampliado (espejo de engine/src/mathjson.jl)
+describe("mockEvalCell — catálogo Fase 1: trig, log, raíces, enteros", () => {
+  it("trig completas: Cot, Sec, Csc", () => {
+    expect(eval_(["Cot", Math.PI / 4])).toMatchObject({ status: "ok" });
+    expect(eval_(["Sec", 0])).toMatchObject({ status: "ok", value: "1" });
+    expect(eval_(["Csc", Math.PI / 2])).toMatchObject({ status: "ok", value: "1" });
+  });
+
+  it("inversas: Arccos (el nombre real de MathJSON), Arcsec, Arccsc", () => {
+    expect(eval_(["Arccos", 1])).toMatchObject({ status: "ok", value: "0" });
+    expect(eval_(["Acos", 1])).toMatchObject({ status: "ok", value: "0" });
+    expect(eval_(["Arcsin", 0])).toMatchObject({ status: "ok", value: "0" });
+    expect(eval_(["Arcsec", 1])).toMatchObject({ status: "ok", value: "0" });
+    const r = eval_(["Arccsc", 1]);
+    expect(r).toMatchObject({ status: "ok" });
+    if (r.status === "ok") expect(parseFloat(r.value)).toBeCloseTo(Math.PI / 2);
+  });
+
+  it("hiperbólicas inversas", () => {
+    expect(eval_(["Arcsinh", 0])).toMatchObject({ status: "ok", value: "0" });
+    expect(eval_(["Arccosh", 1])).toMatchObject({ status: "ok", value: "0" });
+    expect(eval_(["Arctanh", 0])).toMatchObject({ status: "ok", value: "0" });
+  });
+
+  it("log: Ln, Log base 10, Log con base arbitraria, Lb", () => {
+    const ln = eval_(["Ln", Math.E]);
+    expect(ln.status === "ok" && parseFloat(ln.value)).toBeCloseTo(1);
+    expect(eval_(["Log", 100])).toMatchObject({ status: "ok", value: "2" });
+    const lb3 = eval_(["Log", 9, 3]);
+    expect(lb3.status === "ok" && parseFloat(lb3.value)).toBeCloseTo(2);
+    expect(eval_(["Lb", 8])).toMatchObject({ status: "ok", value: "3" });
+  });
+
+  it("Root: orden par exige x ≥ 0; impar cubre ℝ", () => {
+    expect(eval_(["Root", 8, 3])).toMatchObject({ status: "ok", value: "2" });
+    expect(eval_(["Root", -8, 3])).toMatchObject({ status: "ok", value: "-2" });
+    expect(eval_(["Root", 16, 4])).toMatchObject({ status: "ok", value: "2" });
+  });
+
+  it("Floor/Ceil/Round (ties away)/Sign", () => {
+    expect(eval_(["Floor", 2.7])).toMatchObject({ status: "ok", value: "2" });
+    expect(eval_(["Ceil", 2.1])).toMatchObject({ status: "ok", value: "3" });
+    expect(eval_(["Round", 2.5])).toMatchObject({ status: "ok", value: "3" });
+    expect(eval_(["Round", -2.5])).toMatchObject({ status: "ok", value: "-3" });
+    expect(eval_(["Sign", -3])).toMatchObject({ status: "ok", value: "-1" });
+  });
+
+  it("Factorial, GCD, LCM, Mod", () => {
+    expect(eval_(["Factorial", 5])).toMatchObject({ status: "ok", value: "120" });
+    expect(eval_(["GCD", 12, 18])).toMatchObject({ status: "ok", value: "6" });
+    expect(eval_(["LCM", 4, 6])).toMatchObject({ status: "ok", value: "12" });
+    expect(eval_(["Mod", 7, 3])).toMatchObject({ status: "ok", value: "1" });
+    expect(eval_(["Mod", -7, 3])).toMatchObject({ status: "ok", value: "2" });
+  });
+
+  it("Apply/InverseFunction: sin⁻¹ → [\"Apply\",[\"InverseFunction\",\"Sin\"],x]", () => {
+    const r = eval_(["Apply", ["InverseFunction", "Sin"], 0.5]);
+    expect(r.status === "ok" && parseFloat(r.value)).toBeCloseTo(Math.asin(0.5));
+  });
+
+  it("InvisibleOperator con nombre integrado: \\exp, \\gcd, sign", () => {
+    expect(
+      eval_(["InvisibleOperator", "Exp", ["Delimiter", 0]]),
+    ).toMatchObject({ status: "ok", value: "1" });
+    expect(
+      eval_(["InvisibleOperator", "GCD", ["Delimiter", ["Sequence", 12, 18], "'(,)'"]]),
+    ).toMatchObject({ status: "ok", value: "6" });
+    expect(
+      eval_(["InvisibleOperator", "sign", ["Delimiter", -2]]),
+    ).toMatchObject({ status: "ok", value: "-1" });
+  });
+
+  it("nodos especiales: PositiveInfinity → INFINITY, Error → LATEX_INCOMPLETE", () => {
+    expect(eval_("PositiveInfinity")).toMatchObject({
+      status: "error",
+      error: { code: "INFINITY" },
+    });
+    expect(eval_(["Error", "'unexpected-command'"])).toMatchObject({
+      status: "error",
+      error: { code: "LATEX_INCOMPLETE" },
+    });
+  });
+
+  it("dominios del catálogo nuevo → DOMAIN/DIV_ZERO", () => {
+    const cases: [unknown[], string][] = [
+      [["Arcsin", 2], "DOMAIN"],
+      [["Arccos", 2], "DOMAIN"],
+      [["Ln", -1], "DOMAIN"],
+      [["Log", -5], "DOMAIN"],
+      [["Log", 8, 1], "DOMAIN"],
+      [["Root", -8, 4], "DOMAIN"],
+      [["Factorial", -1], "DOMAIN"],
+      [["Factorial", 2.5], "DOMAIN"],
+      [["GCD", 1.5, 2], "DOMAIN"],
+      [["Arctanh", 2], "DOMAIN"],
+      [["Arccosh", 0], "DOMAIN"],
+      [["Mod", 5, 0], "DIV_ZERO"],
+    ];
+    for (const [ast, code] of cases) {
+      expect(eval_(ast)).toMatchObject({
+        status: "error",
+        error: { code },
+      });
+    }
+  });
+});
+
 // Fase 1: plot_data mock (espejo de engine/src/plot.jl)
 describe("mockPlotData — muestreo con x libre", () => {
   it("sin(x) sobre [-π,π] con 5 pts → [0,-1,0,1,0]", () => {

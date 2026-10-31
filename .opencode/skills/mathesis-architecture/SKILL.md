@@ -59,6 +59,10 @@ Mathesis/
 
 ## Estado actual
 
-Solo existe la documentación. El código aún no se ha generado (Fase 0 pendiente:
-scaffold + `2+2` de punta a punta). Al empezar la Fase 0, seguir
-`Documentacion/04-plan/fases.md`.
+- **Fase 0 completada** (30-oct-2026): scaffold + `2+2` de punta a punta, CI verde, licencia GPL-3.0.
+- **Fase 1 (MVP) en marcha** (31-oct-2026): worksheet multi-celda, variables/funciones
+  encadenadas (`eval_document`), traductor MathJSON completo (trig/log/raíces/enteros),
+  `plot_data` (uPlot: inspector + PlotCell/IntervalCell en la hoja), guardado/carga
+  (`doc_save`/`doc_open` con diálogo nativo), atajos. Pendiente: undo/redo,
+  evaluación incremental, watchdog, preferencias.
+- Seguir `Documentacion/04-plan/fases.md` para el detalle del checklist.

@@ -320,6 +320,61 @@ math-field.mf, .mathfield-host math-field {
 }
 .plot-gaps { color: var(--warn, #facc15); }
 .plot-hint { opacity: 0.75; }
+
+/* ── Celda de intervalo (rango x para gráficos) ─────────────────────────── */
+.interval-body {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  font-family: var(--font-mono); font-size: 12px; color: var(--fg-dim);
+}
+.interval-body input {
+  width: 66px; background: var(--bg-cell); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--primary); padding: 4px 6px;
+  font-family: var(--font-mono); font-size: 12px; outline: none;
+}
+.interval-body input:focus { border-color: var(--accent); }
+.interval-body input.steps { width: 54px; }
+.interval-tag { color: var(--accent); }
+.interval-hint { font-size: 10px; color: var(--fg-muted); opacity: 0.8; }
+
+/* ── Celda de gráfico en la hoja (PlotCell) ─────────────────────────────── */
+.plot-cell-body { width: 100%; }
+.plot-exprs {
+  display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.plot-exprs .mathfield-host { min-width: 150px; }
+.plot-var {
+  font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted);
+  border: 1px dashed var(--border); border-radius: 6px; padding: 2px 7px;
+}
+.plot2d-canvas {
+  background: var(--bg-cell); border: 1px solid var(--border);
+  border-radius: 8px; overflow: hidden;
+}
+.plot2d-canvas .u-over { cursor: crosshair; }
+.plot2d-canvas .u-legend {
+  color: #b6bcc9; font: 10px var(--font-mono, monospace);
+  padding: 2px 6px;
+}
+.plot2d-canvas .u-legend .u-marker {
+  width: 8px; height: 8px; border-radius: 2px; display: inline-block;
+  margin-right: 4px;
+}
+.plot-cell-msg {
+  font-size: 12px; color: var(--fg-muted);
+  background: var(--bg-cell); border: 1px dashed var(--border);
+  border-radius: 8px; padding: 12px;
+}
+.plot-cell-msg.err { color: var(--error); border-style: solid; }
+.cell-badge {
+  display: inline-block; margin-top: 4px;
+  font-size: 8.5px; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 1px 5px; border-radius: 5px;
+  background: var(--bg-cell); border: 1px solid var(--border);
+  color: var(--fg-muted);
+}
+.cell-interval .cell-body, .cell-plot .cell-body { flex: 1; }
+.add-block-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .insp-empty {
   background: var(--bg-cell); border: 1px dashed var(--border);
   border-radius: 8px; padding: 12px;

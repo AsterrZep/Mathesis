@@ -9,17 +9,24 @@ import { useDoc, type Cell } from "./store";
 import { MathField } from "./MathField";
 import { insertIntoActive } from "./mathfield-registry";
 import { type PlotData, parseCellAst, plotData } from "./engine";
+import { Plot2D } from "./Plot2D";
 
 // ── Topbar (brand ∫ + doc chip + pill engine + acciones) ─────────────────
 export function Topbar({
   engineLabel,
   onInsert,
   onRun,
+  onNew,
+  onOpen,
+  onSave,
   evaluating,
 }: {
   engineLabel: { cls: string; text: string };
   onInsert: () => void;
   onRun: () => void;
+  onNew: () => void;
+  onOpen: () => void;
+  onSave: () => void;
   evaluating: boolean;
 }) {
   const docTitle = useDoc((s) => s.docTitle);
@@ -40,6 +47,15 @@ export function Topbar({
         </div>
       </div>
       <div className="tb-right">
+        <button className="btn btn-ghost" onClick={onNew} title="Nuevo documento (vacío)">
+          🗀 New
+        </button>
+        <button className="btn btn-ghost" onClick={onOpen} title="Abrir… (Ctrl+O)">
+          📂 Open
+        </button>
+        <button className="btn btn-ghost" onClick={onSave} title="Guardar (Ctrl+S)">
+          💾 Save
+        </button>
         <button className="btn btn-ghost" onClick={onInsert}>
           ＋ Insert Block
         </button>
@@ -139,11 +155,13 @@ export function CellRow({ cell, index }: { cell: Cell; index: number }) {
 
   return (
     <div
-      className={`cell ${selected ? "sel" : ""} ${cell.type === "text" ? "cell-text" : ""}`}
+      className={`cell ${selected ? "sel" : ""} ${cell.type === "text" ? "cell-text" : ""} ${cell.type === "plot" ? "cell-plot" : ""} ${cell.type === "interval" ? "cell-interval" : ""}`}
       onMouseDown={() => setSelected(cell.id)}
     >
       <div className="cell-gutter">
         <span className="cell-num">[{index + 1}]</span>
+        {cell.type === "plot" && <span className="cell-badge">plot</span>}
+        {cell.type === "interval" && <span className="cell-badge">x∈</span>}
         <button
           className="cell-del"
           title="Eliminar celda"
@@ -158,7 +176,7 @@ export function CellRow({ cell, index }: { cell: Cell; index: number }) {
       <div className="cell-body">
         {cell.type === "math" ? (
           <MathField initial={cell.latex} onChange={(l) => setLatex(cell.id, l)} />
-        ) : (
+        ) : cell.type === "text" ? (
           <textarea
             className="cell-textarea"
             value={cell.latex}
@@ -167,30 +185,175 @@ export function CellRow({ cell, index }: { cell: Cell; index: number }) {
             onChange={(e) => setLatex(cell.id, e.target.value)}
             onFocus={() => setSelected(cell.id)}
           />
-        )}
-      </div>
-      <div className="cell-result">
-        {result === undefined ? (
-          <span className="res-idle" />
-        ) : result.status === "error" ? (
-          <span className="err-badge" title={result.error?.message}>
-            {result.error?.code}: {result.error?.message}
-          </span>
-        ) : result.kind === "text" ? (
-          <span className="res-idle" />
-        ) : result.kind === "definition" ? (
-          <span className="pill pill-dim" title="función de usuario definida">
-            {result.value}
-          </span>
+        ) : cell.type === "interval" ? (
+          <IntervalControls cell={cell} />
         ) : (
-          <span className="pill" title="resultado (Julia)">
-            {result.value}
-            {result.unit && result.unit !== "1" && (
-              <span className="pill-unit">{result.unit}</span>
-            )}
-          </span>
+          <PlotControls cell={cell} />
         )}
       </div>
+      {(cell.type === "math" || cell.type === "text") && (
+        <div className="cell-result">
+          {result === undefined ? (
+            <span className="res-idle" />
+          ) : result.status === "error" ? (
+            <span className="err-badge" title={result.error?.message}>
+              {result.error?.code}: {result.error?.message}
+            </span>
+          ) : result.kind === "text" ? (
+            <span className="res-idle" />
+          ) : result.kind === "definition" ? (
+            <span className="pill pill-dim" title="función de usuario definida">
+              {result.value}
+            </span>
+          ) : (
+            <span className="pill" title="resultado (Julia)">
+              {result.value}
+              {result.unit && result.unit !== "1" && (
+                <span className="pill-unit">{result.unit}</span>
+              )}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Celda de intervalo: rango x que usan los gráficos de debajo ───────────
+function IntervalControls({ cell }: { cell: Cell }) {
+  const patchCell = useDoc((s) => s.patchCell);
+  const iv = cell.interval ?? { from: "-10", to: "10", steps: 400 };
+  return (
+    <div className="interval-body">
+      <span className="interval-tag">x ∈ [</span>
+      <input
+        value={iv.from}
+        onChange={(e) => patchCell(cell.id, { interval: { ...iv, from: e.target.value } })}
+      />
+      <span>,</span>
+      <input
+        value={iv.to}
+        onChange={(e) => patchCell(cell.id, { interval: { ...iv, to: e.target.value } })}
+      />
+      <span className="interval-tag">]</span>
+      <span>·</span>
+      <input
+        className="steps"
+        value={iv.steps}
+        onChange={(e) =>
+          patchCell(cell.id, {
+            interval: { ...iv, steps: Math.max(2, Number(e.target.value) || 400) },
+          })
+        }
+      />
+      <span>pts</span>
+      <span className="interval-hint">los gráficos situados debajo usan este rango</span>
+    </div>
+  );
+}
+
+// ── Celda de gráfico: 1-2 expresiones + uPlot (muestreo en Julia) ─────────
+function PlotControls({ cell }: { cell: Cell }) {
+  const cells = useDoc((s) => s.cells);
+  const definitions = useDoc((s) => s.definitions);
+  const patchCell = useDoc((s) => s.patchCell);
+  const cfg = cell.plot ?? { f1: "", f2: "", varName: "x" };
+
+  // Rango: último intervalo ANTES de esta celda (si no, -10..10)
+  const idx = cells.findIndex((c) => c.id === cell.id);
+  const iv = [...cells.slice(0, Math.max(idx, 0))]
+    .reverse()
+    .find((c) => c.type === "interval" && c.interval);
+  const from = Number(iv?.interval?.from ?? -10);
+  const to = Number(iv?.interval?.to ?? 10);
+  const steps = Number(iv?.interval?.steps ?? 400);
+
+  const [state, setState] = useState<"idle" | "loading" | "ok" | "error">("idle");
+  const [data, setData] = useState<{ x: number[]; series: { id: string; y: (number | null)[] }[]; nonFinite: number } | null>(null);
+  const [errMsg, setErrMsg] = useState("");
+
+  const doPlot = async () => {
+    const slots = [cfg.f1, cfg.f2].filter((f) => f.trim());
+    if (slots.length === 0 || !Number.isFinite(from) || !Number.isFinite(to)) {
+      setData(null);
+      setState("idle");
+      return;
+    }
+    setState("loading");
+    try {
+      let baseX: number[] | null = null;
+      const series: { id: string; y: (number | null)[] }[] = [];
+      let nonFinite = 0;
+      for (const f of slots) {
+        const ast = parseCellAst(f);
+        if (!ast) continue;
+        // Mismo rango/pasos para todas las series → la x es idéntica
+        const d = await plotData(ast, from, to, steps, cfg.varName || "x", definitions);
+        baseX ??= d.x;
+        series.push({ id: f.length > 20 ? f.slice(0, 20) + "…" : f, y: d.y });
+        nonFinite += d.nonFinite;
+      }
+      if (!baseX || series.length === 0) {
+        setData(null);
+        setState("idle");
+        return;
+      }
+      setData({ x: baseX, series, nonFinite });
+      setState("ok");
+    } catch (e) {
+      setErrMsg(e instanceof Error ? e.message : String(e));
+      setState("error");
+    }
+  };
+
+  // Debounce 500: cambiar expresión/rango/definitions re-muestrea
+  useEffect(() => {
+    const t = window.setTimeout(() => void doPlot(), 500);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cfg.f1, cfg.f2, cfg.varName, from, to, steps, definitions]);
+
+  return (
+    <div className="plot-cell-body">
+      <div className="plot-exprs">
+        <MathField
+          key={`${cell.id}:f1`}
+          initial={cfg.f1}
+          onChange={(l) => patchCell(cell.id, { plot: { ...cfg, f1: l } })}
+        />
+        <MathField
+          key={`${cell.id}:f2`}
+          initial={cfg.f2}
+          onChange={(l) => patchCell(cell.id, { plot: { ...cfg, f2: l } })}
+        />
+        <span className="plot-var" title="variable libre">
+          vs {cfg.varName}
+        </span>
+      </div>
+      {state === "idle" && (
+        <div className="plot-cell-msg">
+          Escribe una expresión (p.ej. <b>sin(x)</b>) — se grafica sola en el
+          rango del intervalo superior
+        </div>
+      )}
+      {state === "loading" && (
+        <div className="plot-cell-msg">◉ muestreando en Julia…</div>
+      )}
+      {state === "error" && <div className="plot-cell-msg err">⚠ {errMsg}</div>}
+      {state === "ok" && data && (
+        <>
+          <Plot2D x={data.x} series={data.series} />
+          <div className="plot-meta">
+            <span>
+              x ∈ [{from}, {to}] · {data.x.length} pts
+            </span>
+            {data.nonFinite > 0 && (
+              <span className="plot-gaps">● {data.nonFinite} fuera de dominio (gap)</span>
+            )}
+            <span className="plot-hint">arrastra = zoom · doble clic = reset</span>
+          </div>
+        </>
+      )}
     </div>
   );
 }

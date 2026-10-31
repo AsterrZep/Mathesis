@@ -56,20 +56,25 @@
 
 ### Solicitar datos de un gráfico
 
+Fase 1 (implementado): UNA expresión por llamada con la variable libre
+muestreada; `null` en `y` = gap (dominio inválido). Para gráficos de 2
+funciones el frontend hace 2 llamadas con el MISMO rango y concatena series
+(la x es idéntica por construcción). Las `env` son las `definitions` del
+documento (variables numéricas).
+
 ```json
 → {"jsonrpc":"2.0","id":4,"method":"plot_data","params":{
-     "cellId":"p1",
-     "x":{"var":"x","from":-1,"to":1,"steps":500},
-     "functions":[
-       {"id":"f1","ast":["Add",1,["Apply",{"ref":"f"},"x"]],"color":"#FF0043"},
-       {"id":"f2","ast":["Subtract",1,["Apply",{"ref":"f"},"x"]],"color":"#0000FF"}]
-   }}
+     "ast":["Sin","x"],"xFrom":-10,"xTo":10,"steps":500,"varName":"x",
+     "env":{"a":2}}}
 ← {"jsonrpc":"2.0","id":4,"result":{
      "status":"ok",
-     "x":[-1.0,-0.996,...],
-     "series":[{"id":"f1","y":[0.15,...],"finite":true},
-               {"id":"f2","y":[...],"finite":true}]}}
+     "x":[-10.0,-9.9799,…],
+     "y":[-0.544,…,null,…],
+     "nonFinite":3,"from":-10.0,"to":10.0}}
 ```
+
+(Contrato futuro multi-serie con `context` de celdas y funciones de usuario —
+ver esquema histórico más abajo — pendiente de la evaluación incremental.)
 
 ### Exportar (LaTeX / imagen / SVG)
 
@@ -107,7 +112,7 @@
 | `eval_cell` | cellId, ast, env | status, value, unit, latex, type |
 | `eval_document` | doc | cells[] (resultados por celda) |
 | `eval_incremental` | changedCellIds, doc | cells[] (solo re-evaluados) |
-| `plot_data` | cellId, x-range, functions[] | x[], series[] |
+| `plot_data` | ast, xFrom, xTo, steps, varName, env | x[], y[] (null=gap), nonFinite |
 | `export` | kind(latex\|figure\|mathjax), doc/cellId, format, theme | mime, data |
 | `simplify` | ast | latex simplificado (para botón "simplificar") |
 | `cancel` | id | ack |
@@ -143,5 +148,21 @@ como "error en la celda", no como fallo del sistema.
 
 - Cálculo numérico simple: sin límite práctico
 - Simbólico (simplify/solve): timeout 30 s con `cancel` disponible
-- Plot: máx. 100k puntos por función (advertencia UI si pide más)
+- Plot: máx. 100k puntos por función (advertencia UI si pide más) — Fase 1 acota a 5000
 - Documento: máx. 5000 celdas (rendimiento)
+
+## Comandos Tauri (frontend ⇄ Rust, Fase 1)
+
+No pasan por JSON-RPC: son `invoke` directos de Tauri sobre el mismo estado.
+
+| Comando | Params | Result | Notas |
+|---|---|---|---|
+| `eval_cell` | cellId, ast, env | result (o status=error) | puente al RPC homónimo |
+| `eval_document` | cells[] | cells[], definitions, functions | puente al RPC homónimo |
+| `plot_data` | ast, xFrom, xTo, steps, varName, env | x[], y[], nonFinite | puente al RPC homónimo |
+| `doc_save` | path?, doc | path (null si cancela) | sin path → diálogo "Guardar como" nativo (`tauri-plugin-dialog`); JSON pretty |
+| `doc_open` | — | {path, doc} \| null | diálogo nativo; null al cancelar |
+| `engine_status` | — | {ready, spawnError} | estado del sidecar |
+
+El formato del documento (`doc`) es el JSON propio v1:
+`{ version: 1, title, cells: [{id, type: "math"|"text"|"plot"|"interval", latex, plot?|interval?}] }`.

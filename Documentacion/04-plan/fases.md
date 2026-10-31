@@ -25,34 +25,53 @@
 - Diseño UI vía MCP Stitch (`Documentacion/07-diseno/`)
 - Tests: **16 vitest + 35 Julia**
 
-## Fase 1 — MVP (hoja de cálculo funcional)
+## Fase 1 — MVP
+
+> **Progreso (31-oct-2026):** ✅ worksheet multi-celda con gutter numerado ·
+> ✅ variables encadenadas (`eval_document` + EvalCtx) · ✅ funciones de usuario
+> `f(x):=…` + llamadas · ✅ paleta de símbolos (insert en celda activa) ·
+> ✅ gráficos uPlot en inspector (`plot_data`: auto-plot al seleccionar,
+> rango editable, gaps de dominio) · ✅ **traductor MathJSON completo**
+> (trig completas + hiperbólicas + inversas, logs con base, Root, Factorial,
+> GCD/LCM/Mod, Floor/Ceil/Round/Sign, `Apply`/`InverseFunction`, nombres vía
+> `InvisibleOperator`: \exp \gcd \operatorname{sign}) · ✅ **PlotCell en la
+> hoja** (2 funciones, leyenda, zoom/pan) + **IntervalCell** (rango x) ·
+> ✅ **guardar/cargar JSON** (`doc_save`/`doc_open` con diálogo nativo
+> `tauri-plugin-dialog`; localStorage en navegador dev) · ✅ atajos
+> (Enter = nueva celda · Ctrl+S/O/N) · ✅ diseño Stitch implementado ·
+> ⬜ undo/redo · ⬜ evaluación incremental · ⬜ watchdog del sidecar ·
+> ⬜ persistencia de preferencias
+>
+> Tests: **108 Julia + 33 vitest** · clippy limpio · CI · commits `8a4a511` + chunk gráficos/guardado
 
 **Objetivo:** documento real con fórmulas, resultados y gráficos 2D.
 
 ### Motor Julia
-- [ ] Traductor MathJSON completo (~60 operadores: aritmética, trig, log, raíces, potencias)
-- [ ] Entorno del documento: variables (`x = 2`), referencias entre celdas, funciones usuario `f(x):=…`
+- [x] Traductor MathJSON completo (~60 operadores: aritmética, trig, log, raíces, potencias)
+- [x] Entorno del documento: variables (`x = 2`), referencias entre celdas, funciones usuario `f(x):=…`
 - [ ] Evaluación incremental (re-evaluar solo celdas afectadas)
-- [ ] Errores de dominio tipados (DIV_ZERO, UNDEFINED_VAR…)
-- [ ] `plot_data`: muestreo de funciones → arrays x/y
+- [x] Errores de dominio tipados (DIV_ZERO, UNDEFINED_VAR, DOMAIN, NAN, INFINITY, LATEX_INCOMPLETE…)
+- [x] `plot_data`: muestreo de funciones → arrays x/y (gaps `null` fuera de dominio)
 
 ### Frontend
-- [ ] Worksheet con celdas: `EquationCell`, `ExpressionCell`, `TextCell`
-- [ ] Resultados en vivo con debounce
-- [ ] Manejo de errores inline
-- [ ] `PlotCell` con uPlot (2 funciones, grid, leyenda, zoom/pan)
-- [ ] `IntervalCell` (rango de x para el plot)
-- [ ] Paleta de símbolos básica (fracción, potencia, √, ∫ Σ, griegas)
+- [x] Worksheet con celdas: `math` / `text` (ramas de `CellRow`)
+- [x] Resultados en vivo con debounce
+- [x] Manejo de errores inline
+- [x] `PlotCell` con uPlot (2 funciones, grid, leyenda, zoom/pan) — celda en la hoja
+- [x] `IntervalCell` (rango de x para el plot: desde/hasta/pasos)
+- [x] Paleta de símbolos básica (fracción, potencia, √, ∫ Σ, griegas)
 - [ ] Undo/Redo (patches)
-- [ ] Atajos de teclado (Enter, Delete, mover celdas)
+- [x] Atajos de teclado (Enter, Ctrl+S, Ctrl+O, Ctrl+N)
 
 ### Rust
-- [ ] `doc_new/open/save` (JSON) — diálogo nativo
+- [x] `doc_open`/`doc_save` (JSON) — diálogo nativo (`tauri-plugin-dialog`); `doc_new` en el frontend
 - [ ] Watchdog del sidecar + reinicio
 - [ ] Persistencia de preferencias (tema, dígitos)
 
 **Criterio de salida:** documento con 10 fórmulas encadenadas + gráfico 2D de
 `sin(x)`, guardable y reabrible.
+(✅ gráfico 2D de `sin(x)` en celda plot · ✅ guardado/carga persistente ·
+faltan undo/redo, evaluación incremental y watchdog para cerrar la fase)
 
 ## Fase 2 — Unidades, formato y documentos ricos
 
