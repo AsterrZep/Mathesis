@@ -18,34 +18,60 @@ function plot_data(params)
     steps = clamp(Int(pget(params, :steps, 500)), 2, 5000)
     varname = string(pget(params, :varName, "x"))
 
-    # Definitions del documento (para graficar p.ej. sin(a*t) con a definida)
-    basevars = Dict{String,Float64}()
+    # Definitions del documento (Fase 2: pueden traer {value, unit})
+    basevars = Dict{String,Any}()
     envobj = pget(params, :env, nothing)
     if envobj isa AbstractDict
         for (k, v) in pairs(envobj)
-            v isa Real && (basevars[string(k)] = Float64(v))
+            basevars[string(k)] = env_quantity_from_spec(v)
         end
     end
 
     x = collect(range(from, to; length = steps))
-    y = Vector{Any}(undef, steps)
-    nonfinite = 0
+
+    # Muestreo: las cantidades se guardan tal cual (JSON no las admite → se
+    # unifican abajo); error de dominio/undefined → gap.
+    raw = Vector{Any}(undef, steps)
     for (i, t) in enumerate(x)
         ctxvars = copy(basevars)
         ctxvars[varname] = t
-        v = try
+        raw[i] = try
             mj_eval(ast, EvalCtx(ctxvars))
         catch
-            NaN   # dominio inválido / undefined → gap en el trazo
+            nothing   # dominio inválido / undefined → gap en el trazo
         end
-        if isfinite(v)
-            y[i] = v
-        else
+    end
+
+    # Unidad de referencia = unidad de la PRIMERA muestra con unidad; el
+    # resto se convierte a ella (mismatch dimensional → gap).
+    ref = nothing
+    for v in raw
+        v isa Quantity && (ref = unit(v); break)
+    end
+
+    y = Vector{Any}(undef, steps)
+    nonfinite = 0
+    for (i, v) in enumerate(raw)
+        num = nothing
+        if v isa Quantity && ref !== nothing
+            vv = try
+                uconvert(ref, v)
+            catch
+                nothing   # unidad incompatible → gap
+            end
+            vv !== nothing && (num = ustrip(vv))
+        elseif v isa Real
+            num = Float64(v isa Quantity ? ustrip(v) : v)
+        end
+        if num === nothing || !isfinite(num)
             y[i] = nothing   # null JSON → gap de uPlot
             nonfinite += 1
+        else
+            y[i] = num
         end
     end
 
     return (status = "ok", x = x, y = y,
-            nonFinite = nonfinite, from = from, to = to)
+            nonFinite = nonfinite, from = from, to = to,
+            unit = ref === nothing ? "1" : something(string(ref), "1"))
 end

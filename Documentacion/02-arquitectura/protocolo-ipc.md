@@ -144,6 +144,25 @@ incompatible) **NO** son errores RPC: van en `result.status = "error"` con un
 código de dominio (`DIV_ZERO`, `UNIT_MISMATCH`…), para que la UI los pinte
 como "error en la celda", no como fallo del sistema.
 
+### Códigos de dominio (result.status="error")
+
+| Código | Significado |
+|---|---|
+| `DIV_ZERO` · `UNDEFINED_VAR` · `DOMAIN` · `NAN` · `INFINITY` | Fase 0/1 |
+| `UNIT_MISMATCH` | unidades incompatibles (`1 m + 1 s`, `→` entre dimensiones distintas, `sin(2 m)`) |
+| `UNIT_AFFINE` | operación inválida con unidad affine (`100 °C + 50 °C` — usar `→` para convertir) |
+| `UNIT_PARSE` | unidad desconocida en `env`/settings round-trip |
+| `UNIT_OP` | operador sin definir para cantidades |
+| `LATEX_INCOMPLETE` | LaTeX roto (nodo `Error` de MathLive) |
+| `ARITY` · `RECURSION` · `FUNC_AS_VALUE` · `INVALID_AST` · `INVALID_CTX` · `UNKNOWN_OP` · `UNSUPPORTED` | estructura/AST |
+
+### Unidades (Fase 2)
+
+- Resultado: `{status:"ok", value:"1000", unit:"m", …}` — `unit:"1"` = adimensional.
+- `definitions`: `{a: 5.0}` o `{a: {value: 5.0, unit: "m"}}` — el frontend pinta
+  la columna *Dim* del Inspector y `plot_data` reconstruye la cantidad desde
+  `env` con el parser de unidades (`"m s^-1"`, `"km"`, `"°C"`, `"bit"`…).
+
 ## Ciclo de vida y watchdog (lado Rust) — ✅ implementado (Fase 1)
 
 1. Al abrir la app: `spawn` con resolución de ruta (env `MATHESIS_ENGINE` →

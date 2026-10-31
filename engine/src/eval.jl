@@ -9,11 +9,29 @@
 #
 # Resultados según Documentacion/02-arquitectura/protocolo-ipc.md
 
+# ── Helpers JSON (Fase 2: cantidades → {value, unit}) ──────────────────────
+
+"""Valor para el JSON del resultado: número plano o {value, unit}."""
+function json_def_value(x)   # SIN anotación ::Real (véase mathjson.jl)
+    x isa Quantity || return Float64(x)
+    v, u = value_and_unit(x)
+    return (value = v, unit = u)
+end
+
+"""definitions → JSON seguro para el frontend (Inspector y plot_data env)."""
+function json_definitions(vars::AbstractDict)
+    out = Dict{String,Any}()
+    for (k, v) in pairs(vars)
+        out[String(k)] = json_def_value(v)
+    end
+    return out
+end
+
 """
     eval_cell(params) -> NamedTuple
 
-params: { cellId, ast (MathJSON), env: {varName: {value: number}}, settings? }
-result: { status: "ok", value: "4", unit: "1", type: "real" }
+params: { cellId, ast (MathJSON), env: {varName: {value, unit?}}, settings? }
+result: { status: "ok", value: "4", unit: "m", type: "real" }
       | { status: "error", error: {code, message, cellId} }
 """
 function eval_cell(params)
@@ -22,22 +40,22 @@ function eval_cell(params)
     ast === nothing && throw(MathError("INVALID_AST", "Falta el AST de la celda"))
     digits = parse_digits(pget(params, :settings, nothing))
 
-    # Entorno de variables externo (unidades ignoradas en Fase 1)
-    env = Dict{String,Float64}()
+    # Entorno de variables externo (Fase 2: acepta {value, unit} → cantidad)
+    env = Dict{String,Any}()
     env_obj = pget(params, :env, nothing)
     if env_obj isa AbstractDict
         for (name, spec) in pairs(env_obj)
-            v = spec isa Real ? spec : pget(spec, :value, nothing)
-            env[string(name)] = Float64(v)   # lanza si no es numérico → INTERNAL
+            env[string(name)] = env_quantity_from_spec(spec)
         end
     end
 
     x = mj_eval(ast, EvalCtx(env))
     check_finite(x)
+    vnum, vunit = value_and_unit(x)
 
     return (status = "ok",
-            value = format_number(x, digits),
-            unit = "1",
+            value = format_number(vnum, digits),
+            unit = vunit,
             type = "real")
 end
 
@@ -91,7 +109,7 @@ end
 
 # ── Caché de la última evaluación (corazón del incremental) ────────────────
 struct CellCacheEntry
-    defines::Dict{String,Float64}
+    defines::Dict{String,Any}
     funcs::Dict{String,Tuple{Vector{String},Any}}
     result::NamedTuple
 end
@@ -189,7 +207,7 @@ function eval_document(params)
         affected = affected_cells(cells, [string(x) for x in changed], DOC_CACHE)
     end
 
-    ctx = EvalCtx(Dict{String,Float64}())
+    ctx = EvalCtx(Dict{String,Any}())
     results = Any[]
     seen = Set{String}()
 
@@ -215,7 +233,7 @@ function eval_document(params)
     end
 
     return (cells = results,
-            definitions = ctx.vars,
+            definitions = json_definitions(ctx.vars),
             functions = sort([k for (k, _) in ctx.funcs]),
             recomputed = affected === nothing ? "all" : sort!(collect(affected)))
 end
@@ -246,9 +264,10 @@ function eval_one_cell(c, ctx::EvalCtx, digits::Int)
             val = mj_eval(ast[3], ctx)
             check_finite(val)
             ctx.vars[name] = val
+            vnum, vunit = value_and_unit(val)
             return (cellId = cid, status = "ok",
-                    value = format_number(val, digits), unit = "1", type = "real",
-                    defines = Dict(name => val))
+                    value = format_number(vnum, digits), unit = vunit, type = "real",
+                    defines = Dict{String,Any}(name => json_def_value(val)))
 
         elseif ast isa AbstractVector && !isempty(ast) && String(ast[1]) == "Assign"
             # f(x) := … (o y := 5 como Assign plano)
@@ -269,15 +288,17 @@ function eval_one_cell(c, ctx::EvalCtx, digits::Int)
                 val = mj_eval(rhs, ctx)
                 check_finite(val)
                 ctx.vars[name] = val
+                vnum, vunit = value_and_unit(val)
                 return (cellId = cid, status = "ok",
-                        value = format_number(val, digits), unit = "1", type = "real",
-                        defines = Dict(name => val))
+                        value = format_number(vnum, digits), unit = vunit, type = "real",
+                        defines = Dict{String,Any}(name => json_def_value(val)))
             end
         else
             v = mj_eval(ast, ctx)
             check_finite(v)
+            vnum, vunit = value_and_unit(v)
             return (cellId = cid, status = "ok",
-                    value = format_number(v, digits), unit = "1", type = "real")
+                    value = format_number(vnum, digits), unit = vunit, type = "real")
         end
     catch e
         if e isa MathError
@@ -295,7 +316,7 @@ end
 function cache_store!(cid::String, c, result::NamedTuple, ctx::EvalCtx)
     ctype = string(pget(c, :type, "expression"))
     defs, _ = cell_symbols(ctype, pget(c, :ast, nothing))
-    cdefs = Dict{String,Float64}()
+    cdefs = Dict{String,Any}()
     cfuncs = Dict{String,Tuple{Vector{String},Any}}()
     for d in defs
         if haskey(ctx.vars, d) && !haskey(ctx.funcs, d)
@@ -308,9 +329,10 @@ function cache_store!(cid::String, c, result::NamedTuple, ctx::EvalCtx)
     return nothing
 end
 
-function check_finite(x::Float64)
-    isnan(x) && throw(MathError("NAN", "Resultado no es un número"))
-    isinf(x) && throw(MathError("INFINITY", "Resultado infinito (overflow o división por cero)"))
+function check_finite(x)   # sin anotación: convert(Real,·) tumba cantidades
+    v = x isa Quantity ? ustrip(x) : x
+    isnan(v) && throw(MathError("NAN", "Resultado no es un número"))
+    isinf(v) && throw(MathError("INFINITY", "Resultado infinito (overflow o división por cero)"))
     return nothing
 end
 

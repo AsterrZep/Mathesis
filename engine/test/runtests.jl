@@ -5,7 +5,9 @@ using Test
 
 # Incluye el módulo sin ejecutar el loop RPC (PROGRAM_FILE ≠ MathesisEngine.jl)
 include(joinpath(@__DIR__, "..", "src", "MathesisEngine.jl"))
-using .MathesisEngine: MathError, mj_eval, eval_cell, eval_document, plot_data, process_line, format_number
+using .MathesisEngine: MathError, mj_eval, eval_cell, eval_document, plot_data,
+    process_line, format_number, parse_unit, value_and_unit
+using Unitful
 
 @testset "mj_eval — aritmética MathJSON" begin
     env = Dict{String,Float64}()
@@ -356,4 +358,135 @@ end
     r4 = pl(Dict{Symbol,Any}(
         :ast => ["Add", "x", 0], :xFrom => 5, :xTo => -5, :steps => 100_000))
     @test r4.from == -5.0 && r4.to == 5.0 && length(r4.x) == 5000
+end
+
+@testset "unidades — Fase 2: hoja, aritmética, conversión, errores" begin
+    env = Dict{String,Float64}()
+
+    # 1) Hoja de unidad: 5\,\text{m} → ["InvisibleOperator",5,"m"] → 5.0 m
+    q = mj_eval(["InvisibleOperator", 5, "m"], env)
+    @test q isa Quantity && ustrip(u"m", q) == 5.0
+    # 2) Prefijos, compuestos y round-trip del parser
+    @test parse_unit("km") !== nothing
+    @test parse_unit("m s^-1") !== nothing
+    @test parse_unit("'°C'") !== nothing          # comillas MathLive
+    @test parse_unit("bit") !== nothing && parse_unit("B") !== nothing
+    @test parse_unit("nonesuch") === nothing
+    @test value_and_unit(1.0u"km") == (1000.0 |> x -> 1.0, "km") || value_and_unit(1.0u"km") == (1.0, "km")
+    vn, vu = value_and_unit(2.5u"m/s")
+    @test vn == 2.5 && vu == "m s^-1"
+
+    # 3) Aritmética con conversión automática: 1 km + 500 m → 1500 m
+    r = mj_eval(["Add", ["InvisibleOperator", 1, "km"],
+                        ["InvisibleOperator", 500, "m"]], env)
+    @test ustrip(u"m", r) == 1500.0
+    # Composición: 3 kg·m/s² (como N)
+    r2 = mj_eval(["Multiply", ["Multiply", 3, "kg"],
+                   ["Divide", "m", ["Power", "s", 2]]], env)
+    @test ustrip(upreferred(r2)) == 3.0
+    # Escalar × cantidad y división
+    @test ustrip(u"m", mj_eval(["Multiply", ["InvisibleOperator", 5, "m"], 2], env)) == 10.0
+    @test dimension(mj_eval(["Divide", ["InvisibleOperator", 5, "m"],
+                                    ["InvisibleOperator", 2, "s"]], env)) == u"s^-1" * u"m" |> dimension
+
+    # 4) Errores dimensionales → UNIT_MISMATCH
+    for (ast, code) in [
+        (["Add", ["InvisibleOperator", 1, "m"], ["InvisibleOperator", 1, "s"]], "UNIT_MISMATCH"),
+        (["Sin", ["InvisibleOperator", 1, "m"]], "UNIT_MISMATCH"),
+        (["Ln", ["InvisibleOperator", 2, "m"]], "UNIT_MISMATCH"),
+        (["Power", 2, ["InvisibleOperator", 1, "m"]], "UNIT_MISMATCH"),
+        (["Add", ["InvisibleOperator", 1, "bit"], ["InvisibleOperator", 1, "m"]], "UNIT_MISMATCH"),
+    ]
+        try
+            mj_eval(ast, env)
+            @test false
+        catch e
+            @test e isa MathError && e.code == code
+        end
+    end
+
+    # 5) Ángulos: sin(90°) = 1 (pasa a radianes), cos(0 rad) = 1
+    s = mj_eval(["Sin", ["InvisibleOperator", 90, "'°'"]], env)
+    @test s ≈ 1.0 atol = 1e-12
+    @test mj_eval(["Cos", ["InvisibleOperator", 0, "rad"]], env) ≈ 1.0
+
+    # 6) Conversión →: 1 km → 1000 m (ignora el número del destino)
+    conv = mj_eval(["To", ["InvisibleOperator", 1, "km"],
+                          ["InvisibleOperator", 1000, "m"]], env)
+    @test ustrip(u"m", conv) == 1000.0
+    try
+        mj_eval(["To", ["InvisibleOperator", 1, "m"],
+                      ["InvisibleOperator", 1, "s"]], env)
+        @test false
+    catch e
+        @test e isa MathError && e.code == "UNIT_MISMATCH"
+    end
+
+    # 7) °C (affine): hoja ✓ · 500 K → 226.85 °C ✓ · °C + °C → UNIT_AFFINE
+    @test ustrip(u"°C", mj_eval(["InvisibleOperator", 100, "'°C'"], env)) == 100.0
+    conv2 = mj_eval(["To", ["InvisibleOperator", 500, "K"],
+                           ["InvisibleOperator", 1, "'°C'"]], env)
+    @test ustrip(u"°C", conv2) ≈ 226.85 atol = 1e-9
+    try
+        mj_eval(["Add", ["InvisibleOperator", 100, "'°C'"],
+                       ["InvisibleOperator", 50, "'°C'"]], env)
+        @test false
+    catch e
+        @test e isa MathError && e.code == "UNIT_AFFINE"
+    end
+
+    # 8) Unidades de información (custom, dimensión propia)
+    # OJO: u"" no ve las custom sin register → se resuelven con parse_unit
+    bitu = parse_unit("bit")
+    b = mj_eval(["InvisibleOperator", 8, "bit"], env)
+    @test ustrip(bitu, b) == 8.0
+    conv3 = mj_eval(["To", ["InvisibleOperator", 1, "kB"],
+                           ["InvisibleOperator", 1, "bit"]], env)
+    @test ustrip(bitu, conv3) == 8000.0
+    # floor/redondeo EN SU UNIDAD (Unitful lo rechaza, lo hacemos a mano)
+    fl = mj_eval(["Floor", ["InvisibleOperator", 1.5, "m"]], env)
+    @test fl isa Quantity && ustrip(u"m", fl) == 1.0
+    rd = mj_eval(["Round", ["InvisibleOperator", 2.5, "m"]], env)
+    @test ustrip(u"m", rd) == 3.0
+    # sqrt de área → longitud
+    @test ustrip(u"m", mj_eval(["Sqrt", ["InvisibleOperator", 4, ["Power", "m", 2]]], env)) == 2.0
+end
+
+@testset "unidades — Fase 2: eval_cell / eval_document / plot / RPC" begin
+    # eval_cell con unidad en el resultado
+    r = eval_cell(Dict{String,Any}("cellId" => "u1",
+        "ast" => ["InvisibleOperator", 5, "m"], "env" => Dict()))
+    @test r.status == "ok" && r.value == "5" && r.unit == "m"
+
+    # eval_cell con env {value, unit}
+    r2 = eval_cell(Dict{String,Any}("cellId" => "u2",
+        "ast" => ["Multiply", "a", 2],
+        "env" => Dict("a" => Dict("value" => 9.81, "unit" => "m"))))
+    @test r2.status == "ok" && r2.unit == "m" && parse(Float64, r2.value) ≈ 19.62
+
+    # eval_document: definición con unidad → JSON {value, unit} + downstream
+    doc = Dict{String,Any}("cells" => Any[
+        Dict{String,Any}("cellId" => "d1", "type" => "expression",
+            "ast" => ["Equal", "a", ["InvisibleOperator", 5, "m"]]),
+        Dict{String,Any}("cellId" => "d2", "type" => "expression",
+            "ast" => ["Multiply", "a", 2]),
+    ])
+    rd = eval_document(doc)
+    @test rd.cells[1].unit == "m" && rd.cells[1].value == "5"
+    @test rd.cells[1].defines["a"] == (value = 5.0, unit = "m")
+    @test rd.definitions["a"] == (value = 5.0, unit = "m")
+    @test rd.cells[2].unit == "m" && rd.cells[2].value == "10"
+
+    # plot_data con env que trae unidad: y adimensional en valores de m/s²·x
+    pl = plot_data(Dict{String,Any}(
+        "ast" => ["Multiply", "a", "x"],
+        "xFrom" => 0.0, "xTo" => 2.0, "steps" => 3, "varName" => "x",
+        "env" => Dict("a" => Dict("value" => 9.81, "unit" => "m"))))
+    @test pl.status == "ok" && pl.unit == "m"
+    @test pl.y ≈ [0.0, 9.81, 19.62]
+
+    # RPC end-to-end: unidades serializadas en la respuesta
+    resp = process_line("""{"jsonrpc":"2.0","id":9,"method":"eval_cell","params":{
+        "cellId":"u3","ast":["InvisibleOperator",2,"km"],"env":{}}}""")
+    @test occursin("\"unit\":\"km\"", resp)
 end

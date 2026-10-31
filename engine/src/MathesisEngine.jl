@@ -27,6 +27,7 @@ struct RpcError <: Exception
 end
 Base.showerror(io::IO, e::RpcError) = print(io, "RPC ", e.code, ": ", e.message)
 
+include("units.jl")     # Fase 2: Unitful — hojas de unidad, parser, helpers
 include("mathjson.jl")
 include("eval.jl")
 include("plot.jl")

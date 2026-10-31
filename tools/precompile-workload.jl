@@ -29,3 +29,15 @@ ME.process_line("""{"jsonrpc":"2.0","id":5,"method":"eval_document","params":{
 # plot_data: muestreo con gaps
 ME.process_line("""{"jsonrpc":"2.0","id":6,"method":"plot_data","params":{
     "ast":["Sqrt","x"],"xFrom":-1,"xTo":1,"steps":50,"varName":"x","env":{}}}""")
+
+# unidades (Fase 2): hoja, definición con unidad y conversión →
+ME.process_line("""{"jsonrpc":"2.0","id":7,"method":"eval_cell","params":{
+    "cellId":"u","ast":["InvisibleOperator",5,"m"],"env":{}}}""")
+ME.process_line("""{"jsonrpc":"2.0","id":8,"method":"eval_document","params":{"cells":[
+    {"cellId":"ua","type":"expression","ast":["Equal","a",["InvisibleOperator",5,"m"]]},
+    {"cellId":"ub","type":"expression","ast":["To",
+        ["InvisibleOperator",1,"km"],["InvisibleOperator",1000,"m"]]}],
+    "settings":{"digits":6}}}""")
+ME.process_line("""{"jsonrpc":"2.0","id":9,"method":"plot_data","params":{
+    "ast":["Multiply","a","x"],"xFrom":0,"xTo":1,"steps":10,"varName":"x",
+    "env":{"a":{"value":9.81,"unit":"m"}}}}""")

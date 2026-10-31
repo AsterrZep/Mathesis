@@ -8,7 +8,12 @@ import "uplot/dist/uPlot.min.css";
 import { useDoc, type Cell } from "./store";
 import { MathField } from "./MathField";
 import { insertIntoActive } from "./mathfield-registry";
-import { type PlotData, parseCellAst, plotData } from "./engine";
+import {
+  type DefinitionValue,
+  type PlotData,
+  parseCellAst,
+  plotData,
+} from "./engine";
 import { Plot2D } from "./Plot2D";
 
 // ── Topbar (brand ∫ + doc chip + pill engine + acciones) ─────────────────
@@ -125,6 +130,20 @@ const PALETTE: Record<string, [label: string, latex: string][]> = {
   ],
   Const: [
     ["π", "\\pi "], ["e", "e"], ["∞", "\\infty "], ["φ", "\\varphi "], ["ℏ", "\\hbar "],
+  ],
+  // Unidades (Fase 2): se insertan como \text{u} — el engine las resuelve
+  // con Unitful (5\,\text{m} → ["InvisibleOperator",5,"m"])
+  Units: [
+    ["m", "\\,\\text{m}"], ["cm", "\\,\\text{cm}"], ["km", "\\,\\text{km}"],
+    ["mm", "\\,\\text{mm}"], ["s", "\\,\\text{s}"], ["ms", "\\,\\text{ms}"],
+    ["min", "\\,\\text{min}"], ["h", "\\,\\text{h}"], ["kg", "\\,\\text{kg}"],
+    ["g", "\\,\\text{g}"], ["N", "\\,\\text{N}"], ["Pa", "\\,\\text{Pa}"],
+    ["J", "\\,\\text{J}"], ["W", "\\,\\text{W}"], ["V", "\\,\\text{V}"],
+    ["A", "\\,\\text{A}"], ["Ω", "\\,\\text{Ω}"], ["K", "\\,\\text{K}"],
+    ["°C", "\\,\\text{°C}"], ["L", "\\,\\text{L}"], ["mL", "\\,\\text{mL}"],
+    ["Hz", "\\,\\text{Hz}"], ["rad", "\\,\\text{rad}"], ["°", "\\,\\text{°}"],
+    ["bit", "\\,\\text{bit}"], ["B", "\\,\\text{byte}"], ["kB", "\\,\\text{kB}"],
+    ["→", "\\rightarrow "],
   ],
 };
 
@@ -559,6 +578,11 @@ export function Inspector() {
   const definitions = useDoc((s) => s.definitions);
   const functions = useDoc((s) => s.functions);
   const entries = Object.entries(definitions);
+  // Unidades (Fase 2): las definiciones pueden venir como {value, unit}
+  const show = (v: DefinitionValue) =>
+    typeof v === "number"
+      ? { num: String(v), unit: "—" }
+      : { num: String(v.value), unit: v.unit };
   return (
     <aside className="inspector">
       <PlotPanel />
@@ -580,13 +604,16 @@ export function Inspector() {
             </tr>
           </thead>
           <tbody>
-            {entries.map(([sym, val]) => (
-              <tr key={sym}>
-                <td className="sym">{sym}</td>
-                <td>{val}</td>
-                <td className="dim">—</td>
-              </tr>
-            ))}
+            {entries.map(([sym, val]) => {
+              const d = show(val);
+              return (
+                <tr key={sym}>
+                  <td className="sym">{sym}</td>
+                  <td>{d.num}</td>
+                  <td className="dim">{d.unit}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}

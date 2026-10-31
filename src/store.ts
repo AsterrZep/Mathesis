@@ -6,7 +6,7 @@
 // muestrean vía plot_data.
 
 import { create } from "zustand";
-import type { DocCellResult, DocEvalResult } from "./engine";
+import { type DefinitionValue, type DocCellResult, type DocEvalResult } from "./engine";
 
 export type CellType = "math" | "text" | "plot" | "interval";
 
@@ -89,7 +89,7 @@ interface DocState {
   cells: Cell[];
   selectedId: string | null;
   results: Record<string, DocCellResult>;
-  definitions: Record<string, number>;
+  definitions: Record<string, DefinitionValue>;
   functions: string[];
   evaluating: boolean;
   /** Preferencias (tema, dígitos) — se guardan en el documento */

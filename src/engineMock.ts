@@ -4,8 +4,12 @@
 // Negate, Sqrt, Exp, Abs + constantes π/e + variables del entorno.
 // Se usa en: (1) vite dev sin Tauri, (2) tests unitarios (sin Julia).
 // MANTENER SINCRONIZADO con engine/src/mathjson.jl.
+//
+// LIMITACIONES (como funciones de usuario): UNIDADES — sin Unitful, las
+// hojas "m"/"km" dan UNDEFINED_VAR y el op "To" UNSUPPORTED en navegador;
+// la autoridad matemática real es el engine Julia (Fase 2).
 
-import type { CellResult } from "./engine";
+import type { CellResult, DefinitionValue } from "./engine";
 
 export class MockMathError extends Error {
   constructor(
@@ -311,6 +315,12 @@ function applyOp(op: string, a: number[]): number {
         throw new MockMathError("INVALID_AST", "Expresión vacía");
       }
       return a[a.length - 1];
+    // Conversión de unidades (Fase 2) — solo el engine Julia con Unitful
+    case "To":
+      throw new MockMathError(
+        "UNSUPPORTED",
+        "Las unidades (→) solo están en el engine Julia (mock sin Unitful)",
+      );
     default:
       throw new MockMathError("UNKNOWN_OP", `Operación no soportada aún: ${op}`);
   }
@@ -485,7 +495,7 @@ export function mockPlotData(
   to: number,
   steps = 600,
   varName = "x",
-  env: Record<string, number> = {},
+  env: Record<string, DefinitionValue> = {},
 ) {
   const [lo, hi] = from <= to ? [from, to] : [to, from];
   const n = Math.min(Math.max(Math.trunc(steps), 2), 5000);

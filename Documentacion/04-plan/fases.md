@@ -89,16 +89,28 @@ publicada** (solo Linux: `.deb` + `.rpm`, PackageCompiler).
 
 ## Fase 2 — Unidades, formato y documentos ricos
 
-- [ ] **Unidades** (Unitful): parse de `5 m`, conversión `1 km → 1000 m`, errores de incompatibilidad
-- [ ] Unidades de información (bit/byte/kB…) — definiciones custom
+> **Progreso (31-oct-2026):** ✅ **Unidades con Unitful** (núcleo) ·
+> ✅ **Unidades de información** custom · ⬜ imagen · ⬜ importador `.mmt` ·
+> ⬜ exports (LaTeX/PNG/SVG) · ⬜ ancho de texto · ⬜ i18n ·
+> ✅ tema claro/oscuro (hecho en Fase 1)
+>
+> Tests: **163 Julia + 41 vitest**
+
+- [x] **Unidades** (Unitful): parse de `5 m` (hoja `"m"` → cantidad), conversión
+      `1 km → 1000 m` (`["To",…]`), errores de incompatibilidad (`UNIT_MISMATCH`),
+      °C affine (`UNIT_AFFINE` — se interpreta el literal `100 °C` y `→` convierte),
+      trigonométricas convierten ángulos a radianes, floor/round EN SU UNIDAD,
+      definitions/plot env round-trip vía parser `"m s^-1"`, paleta con pestaña Units
+- [x] Unidades de información (bit/byte/kB/MB) — definiciones custom con dimensión
+      propia (`@dimension` + `@refunit` + `@unit`; UnitfulBits no está en el registry)
 - [ ] Celda de **imagen** (embebida base64, como el original)
 - [ ] **Importador `.mmt`** (parser XML en Rust → nuestro JSON)
 - [ ] Export **LaTeX** del documento (vía engine)
 - [ ] Export **PNG/SVG** de figuras (CairoMakie)
 - [ ] Export imagen del documento completo (render de celdas → canvas → PNG)
-- [ ] Preferencias del documento (dígitos significativos, ancho texto)
+- [ ] Preferencias del documento (dígitos ✅ en Fase 1 · ancho texto pendiente)
 - [ ] i18n: ES + EN (i18next)
-- [ ] Tema claro/oscuro
+- [x] Tema claro/oscuro (Fase 1: `settings.theme` + `data-theme`)
 
 ## Fase 3 — Potencia matemática
 

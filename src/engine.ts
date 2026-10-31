@@ -37,9 +37,12 @@ export interface DocCellResult {
   error?: { code: string; message: string; cellId?: string };
 }
 
+/** Valor de definición: número plano o cantidad con unidad (Fase 2) */
+export type DefinitionValue = number | { value: number; unit: string };
+
 export interface DocEvalResult {
   cells: DocCellResult[];
-  definitions: Record<string, number>;
+  definitions: Record<string, DefinitionValue>;
   functions: string[];
 }
 
@@ -133,7 +136,7 @@ export async function plotData(
   to: number,
   steps = 600,
   varName = "x",
-  env: Record<string, number> = {},
+  env: Record<string, DefinitionValue> = {},
 ): Promise<PlotData> {
   if (isTauri) {
     return await invoke<PlotData>("plot_data", {
