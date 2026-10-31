@@ -128,8 +128,8 @@ if abspath(PROGRAM_FILE) == @__FILE__
 end
 
 # Entrypoint del binario PackageCompiler (create_app genera un executable
-# `MathesisEngine` que llama a julia_main; tools/build-engine-app.jl lo
+# `MathesisEngine` que llama a julia_main y exige retorno Cint; el build lo
 # renombra a mathesis-engine[.exe] para el sidecar de Tauri).
-julia_main() = main()
+julia_main()::Cint = (main(); Cint(0))
 
 end # module
