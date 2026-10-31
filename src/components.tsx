@@ -24,6 +24,7 @@ export function Topbar({
   onNew,
   onOpen,
   onSave,
+  onExport,
   onUndo,
   onRedo,
   canUndo,
@@ -38,6 +39,7 @@ export function Topbar({
   onNew: () => void;
   onOpen: () => void;
   onSave: () => void;
+  onExport: () => void;
   onUndo: () => void;
   onRedo: () => void;
   canUndo: boolean;
@@ -104,7 +106,11 @@ export function Topbar({
         <button className="btn btn-ghost" onClick={onRun} disabled={evaluating}>
           <span className="btn-ico">▶</span> {evaluating ? "…" : "Run All"}
         </button>
-        <button className="btn btn-primary" title="Fase 2" disabled>
+        <button
+          className="btn btn-primary"
+          title="Exportar a LaTeX (.tex) con resultados — Fase 2"
+          onClick={onExport}
+        >
           ⤓ Export
         </button>
       </div>

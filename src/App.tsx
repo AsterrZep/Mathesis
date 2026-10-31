@@ -11,11 +11,13 @@ import { Topbar, SymbolPalette, CellRow, Inspector, StatusBar } from "./componen
 import { useDoc, type DocFile } from "./store";
 import {
   type EngineStatus,
+  docExport,
   docOpen,
   docSave,
   engineStatus,
   evalDocument,
   isTauri,
+  parseCellAst,
 } from "./engine";
 import "./App.css";
 
@@ -142,6 +144,27 @@ export default function App() {
     s.newDoc();
   }, []);
 
+  // ── Export (Fase 2): latex + ast → engine genera el .tex → diálogo nativo ─
+  const exportNow = useCallback(async () => {
+    const s = useDoc.getState();
+    const cells = s.cells
+      .filter((c) => c.type === "math" || c.type === "text")
+      .map((c) => ({
+        cellId: c.id,
+        type: (c.type === "text" ? "text" : "expression") as
+          | "text"
+          | "expression",
+        latex: c.latex,
+        ast: c.type === "text" ? null : parseCellAst(c.latex),
+      }));
+    try {
+      const p = await docExport("latex", { version: 1, title: s.docTitle, cells });
+      if (p) console.info("[export] guardado en", p);
+    } catch (e) {
+      window.alert(`No se pudo exportar: ${e instanceof Error ? e.message : e}`);
+    }
+  }, []);
+
   // Atajos: Ctrl/Cmd+S guardar · Ctrl/Cmd+O abrir · Ctrl/Cmd+N nuevo ·
   // Enter (fuera de un editor) = nueva fórmula debajo de la seleccionada
   useEffect(() => {
@@ -233,6 +256,7 @@ export default function App() {
         onNew={newNow}
         onOpen={() => void openNow()}
         onSave={() => void saveNow()}
+        onExport={() => void exportNow()}
         onUndo={undo}
         onRedo={redo}
         canUndo={canUndo}

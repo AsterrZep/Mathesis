@@ -31,6 +31,7 @@ include("units.jl")     # Fase 2: Unitful — hojas de unidad, parser, helpers
 include("mathjson.jl")
 include("eval.jl")
 include("plot.jl")
+include("export.jl")    # Fase 2: export LaTeX
 
 # Acceso robusto a params: JSON3.Object acepta símbolos, Dict{String,Any}
 # acepta strings (tests y envíos manuales) — probamos ambos.
@@ -58,6 +59,8 @@ function handle_method(method::AbstractString, params)
         return eval_document(params)
     elseif method == "plot_data"
         return plot_data(params)
+    elseif method == "export"
+        return export_doc(params)
     elseif method == "shutdown"
         # El loop principal sale al cerrar stdin; confirmamos limpiamente
         return (ok = true,)

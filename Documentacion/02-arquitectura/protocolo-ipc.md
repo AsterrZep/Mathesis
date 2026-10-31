@@ -87,18 +87,23 @@ documento (variables numéricas).
 (Contrato futuro multi-serie con `context` de celdas y funciones de usuario —
 ver esquema histórico más abajo — pendiente de la evaluación incremental.)
 
-### Exportar (LaTeX / imagen / SVG)
+### Exportar (LaTeX — ✅ implementado Fase 2)
+
+`export` con `kind:"latex"`: el frontend manda `doc.cells` con **latex + ast**
+(parse canonical:false); Julia evalúa el doc y devuelve un `.tex` con
+`\[ latex = resultado \mathrm{unidad} \]`, texto escapado y errores marcados
+como `\text{(error: CÓDIGO)}`. `kind:"figure"` (PNG/SVG vía CairoMakie) queda
+pendiente.
 
 ```json
 → {"jsonrpc":"2.0","id":5,"method":"export","params":{
-     "kind":"latex","doc":{...}}}
-← {"jsonrpc":"2.0","id":5,"result":{"status":"ok","content":"\\begin{align}..."}}
-
-→ {"jsonrpc":"2.0","id":6,"method":"export","params":{
-     "kind":"figure","cellId":"p1","format":"svg","theme":"dark"}}
-← {"jsonrpc":"2.0","id":6,"result":{"status":"ok","mime":"image/svg+xml","data":"<svg…>"}}}
+     "kind":"latex","doc":{"title":"Mi doc","cells":[
+       {"cellId":"a","type":"expression","latex":"a=2","ast":["Equal","a",2]}]}}}
+← {"jsonrpc":"2.0","id":5,"result":{"status":"ok",
+     "content":"\\documentclass…\\end{document}\n",
+     "mime":"application/x-latex","filename":"Mi_doc.tex"}}
 ```
-(CairoMakie renderiza el figure → Rust lo escribe a disco o lo pasa al frontend)
+(Guardado en disco vía comando Tauri `doc_export` con diálogo "Guardar como".)
 
 ### Cancelar evaluación en curso
 

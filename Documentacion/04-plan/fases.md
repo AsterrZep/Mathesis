@@ -90,11 +90,11 @@ publicada** (solo Linux: `.deb` + `.rpm`, PackageCompiler).
 ## Fase 2 — Unidades, formato y documentos ricos
 
 > **Progreso (31-oct-2026):** ✅ **Unidades con Unitful** (núcleo) ·
-> ✅ **Unidades de información** custom · ⬜ imagen · ⬜ importador `.mmt` ·
-> ⬜ exports (LaTeX/PNG/SVG) · ⬜ ancho de texto · ⬜ i18n ·
-> ✅ tema claro/oscuro (hecho en Fase 1)
+> ✅ **Unidades de información** custom · ✅ **Export LaTeX** (botón Export) ·
+> ⬜ imagen · ⬜ importador `.mmt` · ⬜ exports PNG/SVG · ⬜ ancho de texto ·
+> ⬜ i18n · ✅ tema claro/oscuro (hecho en Fase 1)
 >
-> Tests: **163 Julia + 41 vitest**
+> Tests: **173 Julia + 41 vitest**
 
 - [x] **Unidades** (Unitful): parse de `5 m` (hoja `"m"` → cantidad), conversión
       `1 km → 1000 m` (`["To",…]`), errores de incompatibilidad (`UNIT_MISMATCH`),
@@ -105,7 +105,9 @@ publicada** (solo Linux: `.deb` + `.rpm`, PackageCompiler).
       propia (`@dimension` + `@refunit` + `@unit`; UnitfulBits no está en el registry)
 - [ ] Celda de **imagen** (embebida base64, como el original)
 - [ ] **Importador `.mmt`** (parser XML en Rust → nuestro JSON)
-- [ ] Export **LaTeX** del documento (vía engine)
+- [x] Export **LaTeX** del documento (vía engine — `export` kind=latex + comando
+      `doc_export` con diálogo nativo, resultados de Julia en cada fórmula,
+      texto escapado; botón Export del topbar activo)
 - [ ] Export **PNG/SVG** de figuras (CairoMakie)
 - [ ] Export imagen del documento completo (render de celdas → canvas → PNG)
 - [ ] Preferencias del documento (dígitos ✅ en Fase 1 · ancho texto pendiente)

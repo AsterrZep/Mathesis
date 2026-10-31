@@ -192,3 +192,17 @@ export async function docOpen(): Promise<OpenedDoc | null> {
     return null;
   }
 }
+
+/**
+ * Exporta el documento (Fase 2: `latex` → .tex con resultados evaluados por
+ * Julia). El doc debe llevar las celdas CON `ast` (parse canonical:false) y
+ * `latex`. Guarda con diálogo nativo y devuelve la ruta (null = cancelado).
+ */
+export async function docExport(kind: string, doc: unknown): Promise<string | null> {
+  if (isTauri) {
+    return await invoke<string | null>("doc_export", { kind, path: null, doc });
+  }
+  throw new Error(
+    "Export solo disponible en la app de escritorio (requiere el engine Julia)",
+  );
+}

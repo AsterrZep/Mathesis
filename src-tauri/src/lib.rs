@@ -125,6 +125,51 @@ async fn doc_open(app: tauri::AppHandle) -> Result<Option<Value>, String> {
     Ok(Some(serde_json::json!({ "path": path, "doc": doc })))
 }
 
+/// Exporta el documento (Fase 2: latex) — el engine produce el contenido
+/// con sus resultados y Rust lo guarda vía diálogo "Guardar como" nativo.
+/// Frontend: invoke("doc_export", { kind: "latex", doc }) → path | null
+#[tauri::command]
+async fn doc_export(
+    app: tauri::AppHandle,
+    engine: tauri::State<'_, engine::Engine>,
+    kind: String,
+    path: Option<String>,
+    doc: Value,
+) -> Result<Option<String>, String> {
+    let result = engine
+        .call("export", serde_json::json!({ "kind": kind, "doc": doc }))
+        .await?;
+    let content = result
+        .get("content")
+        .and_then(|c| c.as_str())
+        .ok_or_else(|| "el engine no devolvió contenido".to_string())?;
+    let filename = result
+        .get("filename")
+        .and_then(|f| f.as_str())
+        .unwrap_or("documento.tex")
+        .to_string();
+
+    let target = match path {
+        Some(p) => p,
+        None => {
+            let (tx, rx) = tokio::sync::oneshot::channel();
+            app.dialog()
+                .file()
+                .add_filter("LaTeX", &["tex"])
+                .set_file_name(&filename)
+                .save_file(move |p| {
+                    let _ = tx.send(p.map(|f| f.to_string()));
+                });
+            match rx.await {
+                Ok(Some(p)) => p,
+                _ => return Ok(None), // cancelado
+            }
+        }
+    };
+    std::fs::write(&target, content).map_err(|e| format!("No se pudo escribir: {e}"))?;
+    Ok(Some(target))
+}
+
 /// Estado del sidecar: { ready, spawnError }
 #[tauri::command]
 fn engine_status(engine: tauri::State<'_, engine::Engine>) -> Value {
@@ -164,6 +209,7 @@ pub fn run() {
             plot_data,
             doc_save,
             doc_open,
+            doc_export,
             engine_status,
             ping_engine
         ])

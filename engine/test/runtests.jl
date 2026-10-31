@@ -6,7 +6,7 @@ using Test
 # Incluye el módulo sin ejecutar el loop RPC (PROGRAM_FILE ≠ MathesisEngine.jl)
 include(joinpath(@__DIR__, "..", "src", "MathesisEngine.jl"))
 using .MathesisEngine: MathError, mj_eval, eval_cell, eval_document, plot_data,
-    process_line, format_number, parse_unit, value_and_unit
+    process_line, format_number, parse_unit, value_and_unit, export_doc
 using Unitful
 
 @testset "mj_eval — aritmética MathJSON" begin
@@ -489,4 +489,45 @@ end
     resp = process_line("""{"jsonrpc":"2.0","id":9,"method":"eval_cell","params":{
         "cellId":"u3","ast":["InvisibleOperator",2,"km"],"env":{}}}""")
     @test occursin("\"unit\":\"km\"", resp)
+end
+
+@testset "export latex — Fase 2" begin
+    payload = Dict{String,Any}("kind" => "latex", "doc" => Dict{String,Any}(
+        "title" => "Mi doc_100%",
+        "cells" => Any[
+            Dict{String,Any}("cellId" => "e1", "type" => "expression",
+                "latex" => "a=2", "ast" => ["Equal", "a", 2]),
+            Dict{String,Any}("cellId" => "e2", "type" => "expression",
+                "latex" => "b\\cdot 3", "ast" => ["Multiply", "b", 3]),
+            Dict{String,Any}("cellId" => "e3", "type" => "expression",
+                "latex" => "5\\,\\text{m}", "ast" => ["InvisibleOperator", 5, "m"]),
+            Dict{String,Any}("cellId" => "e4", "type" => "expression",
+                "latex" => "f(2)", "ast" => ["InvisibleOperator", "f", ["Delimiter", 2]]),
+            Dict{String,Any}("cellId" => "t1", "type" => "text",
+                "latex" => "Nota: 100% & se dibuja"),
+            Dict{String,Any}("cellId" => "p1", "type" => "plot", "latex" => ""),
+        ]))
+    r = export_doc(payload)
+    @test r.status == "ok" && r.mime == "application/x-latex"
+    @test endswith(r.content, "\\end{document}\n")
+    # Preámbulo + título escapado (underscore y % son peligrosos en LaTeX)
+    @test occursin("\\documentclass[11pt]{article}", r.content)
+    @test occursin("\\title{Mi doc\\_100\\%}", r.content)
+    # Definición a=2: NO se duplica el resultado
+    @test occursin("\\[ a=2 \\]", r.content)
+    # Celda con error → marcador inline con código (underscore escapado)
+    @test occursin("b\\cdot 3 \\qquad \\text{(error: UNDEFINED\\_VAR)}", r.content)
+    # Expresión con unidad → resultado de JULIA con unidad en mathrm
+    @test occursin("5\\,\\text{m} = 5 \\,\\mathrm{m}", r.content)
+    # f(2) sin definición → error marcado (no rompe el doc)
+    @test occursin("\\text{(error: UNDEFINED\\_VAR)}", r.content)
+    # Texto escapado
+    @test occursin("Nota: 100\\% \\& se dibuja", r.content)
+    # kind inexistente → UNSUPPORTED
+    try
+        export_doc(Dict{String,Any}("kind" => "png", "doc" => Dict("cells" => [])))
+        @test false
+    catch e
+        @test e isa MathError && e.code == "UNSUPPORTED"
+    end
 end

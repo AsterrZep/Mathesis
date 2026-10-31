@@ -41,3 +41,9 @@ ME.process_line("""{"jsonrpc":"2.0","id":8,"method":"eval_document","params":{"c
 ME.process_line("""{"jsonrpc":"2.0","id":9,"method":"plot_data","params":{
     "ast":["Multiply","a","x"],"xFrom":0,"xTo":1,"steps":10,"varName":"x",
     "env":{"a":{"value":9.81,"unit":"m"}}}}""")
+
+# export latex (Fase 2)
+ME.process_line("""{"jsonrpc":"2.0","id":10,"method":"export","params":{
+    "kind":"latex","doc":{"title":"T","cells":[
+        {"cellId":"x","type":"expression","latex":"a=2","ast":["Equal","a",2]},
+        {"cellId":"y","type":"text","latex":"hola"}]}}}""")
