@@ -32,10 +32,11 @@ mv(joinpath(BIN, "MathesisEngine" * SUFFIX),
 
 # Strip de símbolos de debug (Linux): el .deb bajaba de ~1.17 GB instalados;
 # libLLVM/libjulia-codegen traen debug info enorme. M-5 en 04-plan/fases.md.
-if Sys.islinux()
+# (En función: el scope suave de un script a top-level rompe los += del loop.)
+function strip_elfs(dest::String)::Tuple{Int,Int}
     stripped = 0
     fallidos = 0
-    for (root, _, files) in walkdir(DEST), f in files
+    for (root, _, files) in walkdir(dest), f in files
         path = joinpath(root, f)
         isfile(path) || continue
         is_elf = try
@@ -52,6 +53,11 @@ if Sys.islinux()
             @warn "strip falló (se conserva el binario)" path exception = e
         end
     end
+    return (stripped, fallidos)
+end
+
+if Sys.islinux()
+    stripped, fallidos = strip_elfs(DEST)
     @info "Strip completado" archivos = stripped fallidos
 end
 
