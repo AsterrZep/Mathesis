@@ -5,7 +5,7 @@ using Test
 
 # Incluye el módulo sin ejecutar el loop RPC (PROGRAM_FILE ≠ MathesisEngine.jl)
 include(joinpath(@__DIR__, "..", "src", "MathesisEngine.jl"))
-using .MathesisEngine: MathError, mj_eval, eval_cell, process_line, format_number
+using .MathesisEngine: MathError, mj_eval, eval_cell, eval_document, process_line, format_number
 
 @testset "mj_eval — aritmética MathJSON" begin
     env = Dict{String,Float64}()
@@ -92,6 +92,53 @@ end
     catch e
         @test e isa MathError && e.code == "INVALID_AST"
     end
+end
+
+@testset "eval_document — Fase 1: variables y funciones encadenadas" begin
+    doc(cells) = Dict{String,Any}("cells" => cells)
+    eq(cid, ast) = Dict{String,Any}("cellId" => cid, "type" => "equation", "ast" => ast)
+    ex(cid, ast) = Dict{String,Any}("cellId" => cid, "type" => "expression", "ast" => ast)
+    tx(cid) = Dict{String,Any}("cellId" => cid, "type" => "text")
+
+    # 1) cadena de variables: a=2 → b=a²+1 → b*3
+    r = eval_document(doc([
+        eq("c1", ["Equal", "a", 2]),
+        eq("c2", ["Equal", "b", ["Add", ["Power", "a", 2], 1]]),
+        ex("c3", ["Multiply", "b", 3]),
+        tx("c4"),
+    ]))
+    vals = Dict(c.cellId => get(c, :value, nothing) for c in r.cells)
+    @test vals["c1"] == "2"
+    @test vals["c2"] == "5"     # 2²+1
+    @test vals["c3"] == "15"    # 5·3
+    @test r.cells[4].status == "ok" && r.cells[4].kind == "text"
+    @test r.definitions["a"] == 2.0 && r.definitions["b"] == 5.0
+
+    # 2) función de usuario: f(x):=x²+1 · f(3) = 10
+    r2 = eval_document(doc([
+        eq("f", ["Assign", "f", ["Function", ["Add", ["Power", "x", 2], 1], "x"]]),
+        ex("v1", ["InvisibleOperator", "f", ["Delimiter", 3]]),
+        ex("v2", ["InvisibleOperator", "f", ["Delimiter",
+            ["Sequence", 1, 2], "'(,)'"]]),   # f(1,2) → arity error
+    ]))
+    @test r2.cells[1].status == "ok" && r2.cells[1].kind == "definition"
+    @test r2.cells[2].value == "10"
+    @test r2.cells[3].status == "error" && r2.cells[3].error.code == "ARITY"
+    @test r2.functions == ["f"]
+
+    # 3) error en una celda NO detiene las siguientes
+    r3 = eval_document(doc([
+        ex("e1", ["Divide", 1, 0]),
+        eq("e2", ["Equal", "ok_var", 7]),
+        ex("e3", ["Add", "ok_var", 1]),
+    ]))
+    @test r3.cells[1].status == "error" && r3.cells[1].error.code == "DIV_ZERO"
+    @test r3.cells[2].value == "7"
+    @test r3.cells[3].value == "8"
+
+    # 4) variable no definida → error en su celda, el doc sigue
+    r4 = eval_document(doc([ex("x1", ["Add", "no_existe", 1])]))
+    @test r4.cells[1].status == "error" && r4.cells[1].error.code == "UNDEFINED_VAR"
 end
 
 @testset "process_line — protocolo JSON-RPC completo" begin

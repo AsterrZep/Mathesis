@@ -140,9 +140,16 @@ export function mockEvalCell(
       if (typeof v === "number") flatEnv[name] = v;
     }
   }
+  return runMockEval(cellId, ast, flatEnv);
+}
 
+function runMockEval(
+  cellId: string,
+  ast: unknown,
+  vars: Record<string, number>,
+): CellResult {
   try {
-    const x = evalNode(ast as Node, flatEnv);
+    const x = evalNode(ast as Node, vars);
     if (Number.isNaN(x)) {
       throw new MockMathError("NAN", "Resultado no es un número");
     }
@@ -166,4 +173,107 @@ export function mockEvalCell(
       },
     };
   }
+}
+
+// ── Fase 1: eval_document en el mock (variables encadenadas) ──────────────
+// Espejo de engine/src/eval.jl. LIMITACIÓN del mock: funciones de usuario
+// (f(x):=…) solo en el engine Julia — en navegador/mock dan UNDEFINED_VAR.
+
+export interface DocMockCell {
+  cellId: string;
+  type: string;
+  ast: unknown;
+}
+export interface DocMockResult {
+  cells: {
+    cellId: string;
+    status: "ok" | "error";
+    value?: string;
+    unit?: string;
+    kind?: string;
+    defines?: Record<string, number>;
+    error?: { code: string; message: string; cellId?: string };
+  }[];
+  definitions: Record<string, number>;
+  functions: string[];
+}
+
+export function mockEvalDocument(cells: DocMockCell[]): DocMockResult {
+  const vars: Record<string, number> = {};
+  const functions: string[] = [];
+  const out: DocMockResult["cells"] = [];
+
+  for (const c of cells) {
+    if (c.type === "text") {
+      out.push({ cellId: c.cellId, status: "ok", kind: "text" });
+      continue;
+    }
+    if (c.ast === null || c.ast === undefined) {
+      out.push({
+        cellId: c.cellId,
+        status: "error",
+        error: { code: "INVALID_AST", message: "Falta el AST", cellId: c.cellId },
+      });
+      continue;
+    }
+    try {
+      const ast = c.ast;
+      if (Array.isArray(ast) && ast[0] === "Equal") {
+        const lhs = ast[1];
+        if (typeof lhs !== "string") {
+          throw new MockMathError(
+            "UNSUPPORTED",
+            "El lado izquierdo de = debe ser un símbolo simple",
+          );
+        }
+        const val = evalNode(ast[2] as Node, vars);
+        vars[lhs] = val;
+        out.push({
+          cellId: c.cellId,
+          status: "ok",
+          value: formatNumber(val),
+          unit: "1",
+          defines: { [lhs]: val },
+        });
+      } else if (Array.isArray(ast) && ast[0] === "Assign") {
+        const lhs = ast[1];
+        if (typeof lhs !== "string") {
+          throw new MockMathError("UNSUPPORTED", "El nombre debe ser un símbolo simple");
+        }
+        const rhs = ast[2];
+        if (Array.isArray(rhs) && rhs[0] === "Function") {
+          functions.push(lhs);
+          out.push({
+            cellId: c.cellId,
+            status: "ok",
+            kind: "definition",
+            value: `${lhs}(${(rhs.slice(2) as unknown[]).join(", ")})`,
+          });
+        } else {
+          const val = evalNode(rhs as Node, vars);
+          vars[lhs] = val;
+          out.push({
+            cellId: c.cellId,
+            status: "ok",
+            value: formatNumber(val),
+            unit: "1",
+            defines: { [lhs]: val },
+          });
+        }
+      } else {
+        const r = runMockEval(c.cellId, c.ast, vars);
+        out.push({ cellId: c.cellId, ...r } as (typeof out)[number]);
+      }
+    } catch (e) {
+      const err =
+        e instanceof MockMathError
+          ? { code: e.code, message: e.message }
+          : {
+              code: "INTERNAL",
+              message: e instanceof Error ? e.message : String(e),
+            };
+      out.push({ cellId: c.cellId, status: "error", error: { ...err, cellId: c.cellId } });
+    }
+  }
+  return { cells: out, definitions: vars, functions: functions.sort() };
 }

@@ -5,7 +5,7 @@ mod engine;
 use serde_json::Value;
 use tauri::Manager;
 
-/// Evalúa una celda del worksheet vía el motor Julia.
+/// Evalúa una celda aislada — el documento completo usa eval_document.
 /// Frontend: invoke("eval_cell", { cellId, ast, env })
 #[tauri::command]
 async fn eval_cell(
@@ -23,6 +23,19 @@ async fn eval_cell(
     // result.status = "error" NO es error RPC: lo devolvemos tal cual para que
     // la UI pinte el error en la celda (ver protocolo-ipc.md).
     Ok(resp)
+}
+
+/// Evalúa el documento COMPLETO en orden (Fase 1): variables y funciones de
+/// usuario se propagan entre celdas.
+/// Frontend: invoke("eval_document", { cells })
+#[tauri::command]
+async fn eval_document(
+    engine: tauri::State<'_, engine::Engine>,
+    cells: Vec<Value>,
+) -> Result<Value, String> {
+    engine
+        .call("eval_document", serde_json::json!({ "cells": cells }))
+        .await
 }
 
 /// Estado del sidecar: { ready, spawnError }
@@ -51,6 +64,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             eval_cell,
+            eval_document,
             engine_status,
             ping_engine
         ])

@@ -52,6 +52,8 @@ function handle_method(method::AbstractString, params)
         return (pong = true,)
     elseif method == "eval_cell"
         return eval_cell(params)
+    elseif method == "eval_document"
+        return eval_document(params)
     elseif method == "shutdown"
         # El loop principal sale al cerrar stdin; confirmamos limpiamente
         return (ok = true,)

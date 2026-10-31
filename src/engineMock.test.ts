@@ -3,7 +3,7 @@
 // Corren sin Julia: `pnpm test`
 
 import { describe, expect, it } from "vitest";
-import { mockEvalCell } from "./engineMock";
+import { mockEvalCell, mockEvalDocument } from "./engineMock";
 
 const eval_ = (ast: unknown, env: Record<string, unknown> = {}) =>
   mockEvalCell("c1", ast, env);
@@ -125,5 +125,45 @@ describe("mockEvalCell — nodos estructurales (canonical:false)", () => {
       status: "error",
       error: { code: "NAN" },
     });
+  });
+});
+
+// Fase 1: eval_document con propagación de variables (espejo de Julia)
+describe("mockEvalDocument — variables encadenadas", () => {
+  const eq = (cellId: string, ast: unknown) => ({ cellId, type: "expression", ast });
+  const tx = (cellId: string) => ({ cellId, type: "text", ast: null });
+
+  it("a=2 → b=a²+1 → b·3 con scope acumulado", () => {
+    const r = mockEvalDocument([
+      eq("c1", ["Equal", "a", 2]),
+      eq("c2", ["Equal", "b", ["Add", ["Power", "a", 2], 1]]),
+      eq("c3", ["Multiply", "b", 3]),
+      tx("c4"),
+    ]);
+    const v = Object.fromEntries(r.cells.map((c) => [c.cellId, c.value ?? c.kind]));
+    expect(v.c1).toBe("2");
+    expect(v.c2).toBe("5");
+    expect(v.c3).toBe("15");
+    expect(r.definitions).toEqual({ a: 2, b: 5 });
+    expect(r.cells[3]).toMatchObject({ kind: "text" });
+  });
+
+  it("error en una celda no detiene las siguientes", () => {
+    const r = mockEvalDocument([
+      eq("e1", ["Divide", 1, 0]),
+      eq("e2", ["Equal", "ok_var", 7]),
+      eq("e3", ["Add", "ok_var", 1]),
+    ]);
+    expect(r.cells[0].error?.code).toBe("DIV_ZERO");
+    expect(r.cells[1].value).toBe("7");
+    expect(r.cells[2].value).toBe("8");
+  });
+
+  it("definición de función f(x):=… se registra (evaluación solo en Julia)", () => {
+    const r = mockEvalDocument([
+      eq("f", ["Assign", "f", ["Function", ["Power", "x", 2], "x"]]),
+    ]);
+    expect(r.cells[0]).toMatchObject({ kind: "definition", value: "f(x)" });
+    expect(r.functions).toEqual(["f"]);
   });
 });

@@ -1,33 +1,33 @@
-// App.tsx — Fase 0: worksheet mínimo con una celda + resultado en vivo.
-// Ciclo: MathLive → debounce 300ms → parse LaTeX→MathJSON (canonical:false)
-//        → evalCell (Rust → Julia) → resultado.
+// App.tsx — Fase 1: worksheet multi-celda con variables encadenadas.
+// Layout estilo Stitch (Documentacion/07-diseno/): topbar · paleta ·
+// celdas numeradas · inspector de scope · statusbar.
+//
+// Ciclo: MathCell → debounce 400ms → parse (canonical:false) →
+//       invoke("eval_document") (Rust → Julia) → resultados por celda.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { ComputeEngine } from "@cortex-js/compute-engine";
-import { MathField } from "./MathField";
+import { Topbar, SymbolPalette, CellRow, Inspector, StatusBar } from "./components";
+import { useDoc } from "./store";
 import {
-  type CellResult,
   type EngineStatus,
   engineStatus,
-  evalCell,
+  evalDocument,
   isTauri,
 } from "./engine";
 import "./App.css";
 
-const DEBOUNCE_MS = 300;
-const CELL_ID = "c1";
-
-// Motor de parse compartido (instanciar es costoso; una vez por módulo)
-const ce = new ComputeEngine();
+const DEBOUNCE_MS = 400;
 
 export default function App() {
-  const [result, setResult] = useState<CellResult | null>(null);
+  const cells = useDoc((s) => s.cells);
+  const selectedId = useDoc((s) => s.selectedId);
+  const evaluating = useDoc((s) => s.evaluating);
+  const setEvaluating = useDoc((s) => s.setEvaluating);
+  const applyResult = useDoc((s) => s.applyResult);
+  const addCell = useDoc((s) => s.addCell);
   const [status, setStatus] = useState<EngineStatus | null>(null);
-  const [evaluating, setEvaluating] = useState(false);
-  const timer = useRef<number>(undefined);
-  // Entorno de variables del documento (Fase 0: vacío — llega de otras celdas)
-  const env = useRef<Record<string, unknown>>({});
+  const seq = useRef(0);
 
   // Estado del motor al arrancar + evento "engine-ready"
   useEffect(() => {
@@ -41,43 +41,32 @@ export default function App() {
     };
   }, []);
 
-  const evaluate = useCallback(async (latex: string) => {
-    if (!latex.trim()) return;
-    // canonical:false preserva el AST puro (["Divide",1,0] en vez de
-    // "NaN"; ["Divide",1,3] en vez de ["Rational",…]) — la autoridad
-    // matemática es Julia, no compute-engine.
-    let ast: unknown;
-    try {
-      ast = ce.parse(latex, { canonical: false }).json;
-    } catch {
-      return; // LaTeX incompleto mientras se escribe
-    }
+  const runEval = useCallback(async () => {
+    const mySeq = ++seq.current;
     setEvaluating(true);
     try {
-      const r = await evalCell(CELL_ID, ast, env.current);
-      setResult(r);
+      const payload = useDoc.getState().cells.map((c) => ({
+        cellId: c.id,
+        type: (c.type === "text" ? "text" : "expression") as
+          | "text"
+          | "expression",
+        latex: c.latex,
+      }));
+      const r = await evalDocument(payload);
+      // guard anti-race: solo aplicar si es la última petición
+      if (mySeq === seq.current) applyResult(r);
     } catch (e) {
-      // Error de IPC/RPC (no error matemático)
-      setResult({
-        status: "error",
-        error: {
-          code: "IPC",
-          message: e instanceof Error ? e.message : String(e),
-          cellId: CELL_ID,
-        },
-      });
+      console.error("eval_document IPC:", e);
     } finally {
-      setEvaluating(false);
+      if (mySeq === seq.current) setEvaluating(false);
     }
-  }, []);
+  }, [applyResult, setEvaluating]);
 
-  const onChange = useCallback(
-    (latex: string) => {
-      window.clearTimeout(timer.current);
-      timer.current = window.setTimeout(() => void evaluate(latex), DEBOUNCE_MS);
-    },
-    [evaluate],
-  );
+  // Debounce: re-evaluar el documento al cambiar cualquier celda
+  useEffect(() => {
+    const t = window.setTimeout(() => void runEval(), DEBOUNCE_MS);
+    return () => window.clearTimeout(t);
+  }, [cells, runEval]);
 
   const chip =
     status === null
@@ -85,48 +74,65 @@ export default function App() {
       : status.spawnError
         ? { cls: "error", text: "sin motor Julia" }
         : status.ready
-          ? { cls: "ok", text: "motor listo" }
+          ? { cls: "ok", text: "engine ready" }
           : { cls: "neutral", text: "iniciando motor…" };
+
+  const onInsert = () => {
+    const idx = selectedId
+      ? cells.findIndex((c) => c.id === selectedId)
+      : cells.length - 1;
+    addCell(idx < 0 ? cells.length - 1 : idx, "math");
+  };
 
   return (
     <div className="app">
-      <header className="topbar">
-        <h1 className="brand">Mathesis</h1>
-        <span className={`chip ${chip.cls}`}>{chip.text}</span>
-      </header>
-
-      <main className="worksheet">
-        <section className="cell">
-          <span className="cell-label">fórmula</span>
-          <div className="cell-row">
-            <MathField initial="2+2" onChange={onChange} />
-            <span className="eq">=</span>
-            <div className={`result ${result?.status ?? ""} ${evaluating ? "busy" : ""}`}>
-              {result === null
-                ? "…"
-                : result.status === "ok"
-                  ? <>
-                      {result.value}
-                      {result.unit !== "1" && <span className="unit">{result.unit}</span>}
-                    </>
-                  : <span
-                      className="err"
-                      title={result.error.message}
-                    >
-                      {result.error.code}: {result.error.message}
-                    </span>}
+      <Topbar
+        engineLabel={chip}
+        onInsert={onInsert}
+        onRun={() => void runEval()}
+        evaluating={evaluating}
+      />
+      <div className="workbench">
+        <SymbolPalette />
+        <main className="worksheet">
+          <div className="sheet-canvas">
+            <div className="sheet-header">
+              <div className="sh-meta">
+                <span className="sh-crumb">📁 Documento</span>
+                <span>·</span>
+                <span>Mathesis Worksheet</span>
+                <span>·</span>
+                <span>Fase 1</span>
+              </div>
+              <h1 className="sh-title">Hoja de cálculo matemática</h1>
+              <p className="sh-desc">
+                Cada celda se evalúa en orden con el motor Julia: define{" "}
+                <b>a</b>, encadena <b>b=a²+1</b>, usa resultados en la
+                siguiente celda — y observa la tabla de símbolos a la derecha.
+              </p>
             </div>
+            <div className="cells">
+              {cells.map((c, i) => (
+                <CellRow key={c.id} cell={c} index={i} />
+              ))}
+            </div>
+            <button
+              className="add-block"
+              onClick={() => addCell(cells.length - 1, "math")}
+            >
+              ＋ Add formula or text block
+            </button>
           </div>
-        </section>
-      </main>
-
-      <footer className="statusbar">
-        <span>
-          Fase 0 · MathJSON → Rust (Tauri) → Julia · escribe una fórmula para
-          evaluarla en vivo
-        </span>
-        <span className="hint">2+2 · (x+1)*3 · 1/0 (prueba el error) · √2</span>
-      </footer>
+        </main>
+        <Inspector />
+      </div>
+      <StatusBar
+        engineText={
+          isTauri
+            ? `◉ ${chip.text} · julia sidecar · RPC json-ndjson`
+            : "◉ mock navegador · sin Julia"
+        }
+      />
     </div>
   );
 }

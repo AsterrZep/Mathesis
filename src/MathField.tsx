@@ -3,11 +3,8 @@
 // Se crea el <math-field> vía new MathfieldElement() en vez de JSX para
 // evitar declarar intrinsic elements y mantener tipado completo.
 //
-// IMPORTANTE: emitimos el LaTeX, NO getValue('math-json'). El MathJSON
-// "default" de compute-engine EVALÚA constantes (1/0 → "NaN" literal,
-// 1/3 → ["Rational",…]) destruyendo el AST que Julia debe evaluar
-// (ver mejora M-2 en Documentacion/04-plan/fases.md). El parse con
-// canonical:false se hace en App.tsx tras el debounce.
+// Emitimos el LaTeX (App parsea con canonical:false — ver engine.ts M-2).
+// M-1: variables inline + hoja en el shadow DOM (sombreado blanco eliminado).
 
 import { useEffect, useRef } from "react";
 import { MathfieldElement } from "mathlive";
@@ -15,15 +12,16 @@ import "@cortex-js/compute-engine";
 // Fuentes oficiales de MathLive resueltas por Vite (evita el NetworkError
 // de su cargador dinámico por defecto en dev/bundling)
 import "mathlive/fonts.css";
+import { setActiveMathfield } from "./mathfield-registry";
 
 interface Props {
-  /** LaTeX inicial */
-  initial?: string;
+  /** LaTeX inicial (valor de la celda al montar; la celda tiene key=id) */
+  initial: string;
   /** Se dispara con el LaTeX actual en cada edición */
   onChange: (latex: string) => void;
 }
 
-export function MathField({ initial = "2+2", onChange }: Props) {
+export function MathField({ initial, onChange }: Props) {
   const host = useRef<HTMLDivElement>(null);
   // Ref para no re-registrar el listener si onChange cambia de identidad
   const cb = useRef(onChange);
@@ -76,12 +74,17 @@ export function MathField({ initial = "2+2", onChange }: Props) {
 
     const emit = () => cb.current(mf.getValue("latex"));
     mf.addEventListener("input", emit);
+    // Registro para la paleta de símbolos (NO se limpia en blur: al hacer
+    // clic en la paleta primero se dispara blur del mathfield).
+    const onFocus = () => setActiveMathfield(mf);
+    mf.addEventListener("focus", onFocus);
 
     host.current.appendChild(mf);
-    emit(); // evaluación inicial (ej. "2+2" al cargar)
+    emit(); // evaluación inicial
 
     return () => {
       mf.removeEventListener("input", emit);
+      mf.removeEventListener("focus", onFocus);
       mf.remove();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
