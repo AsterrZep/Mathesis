@@ -1,6 +1,6 @@
 [package]
 name = "mathesis"
-version = "0.1.0"
+version = "0.1.1"
 description = "Mathesis — super calculadora matemática multiplataforma (worksheet tipo MathCAD)"
 authors = ["Mathesis"]
 edition = "2024"

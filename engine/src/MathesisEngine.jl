@@ -11,7 +11,7 @@ module MathesisEngine
 using JSON3
 
 const PROTOCOL_VERSION = 1
-const ENGINE_VERSION = "0.1.0"
+const ENGINE_VERSION = "0.1.1"
 
 # Error de dominio matemático: NO es error RPC, va dentro de result.status="error"
 struct MathError <: Exception
