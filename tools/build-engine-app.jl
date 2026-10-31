@@ -22,4 +22,11 @@ create_app(
     incremental = false,
     force = true,
 )
-@info "Engine compilado" exe = joinpath(DEST, "bin", "mathesis-engine")
+
+# create_app genera el executable con el nombre del PAQUETE (MathesisEngine,
+# llamando a julia_main); lo renombramos al nombre del sidecar de Tauri.
+const SUFFIX = Sys.iswindows() ? ".exe" : ""
+const BIN = joinpath(DEST, "bin")
+mv(joinpath(BIN, "MathesisEngine" * SUFFIX),
+   joinpath(BIN, "mathesis-engine" * SUFFIX); force = true)
+@info "Engine compilado" exe = joinpath(BIN, "mathesis-engine" * SUFFIX)

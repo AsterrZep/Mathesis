@@ -25,7 +25,7 @@
 - Diseño UI vía MCP Stitch (`Documentacion/07-diseno/`)
 - Tests: **16 vitest + 35 Julia**
 
-## Fase 1 — MVP
+## Fase 1 — MVP ✅ COMPLETADA (31-oct-2026)
 
 > **Progreso (31-oct-2026):** ✅ worksheet multi-celda con gutter numerado ·
 > ✅ variables encadenadas (`eval_document` + EvalCtx) · ✅ funciones de usuario
@@ -43,7 +43,7 @@
 > (PackageCompiler app relocatable empaquetada como resource; workflow
 > Release multiplataforma)
 >
-> Tests: **126 Julia + 33 vitest** · clippy limpio · commits `8a4a511` +
+> Tests: **126 Julia + 41 vitest** · clippy limpio · commits `8a4a511` +
 > `868a83c` + chunk 3
 
 **Objetivo:** documento real con fórmulas, resultados y gráficos 2D.
@@ -78,9 +78,10 @@
       del sysimage y draft release con los instaladores
 
 **Criterio de salida:** documento con 10 fórmulas encadenadas + gráfico 2D de
-`sin(x)`, guardable y reabrible.
-(✅ gráfico 2D de `sin(x)` en celda plot · ✅ guardado/carga persistente ·
-faltan undo/redo, evaluación incremental y watchdog para cerrar la fase)
+`sin(x)`, guardable y reabrible. ✅ **cumplido** (31-oct-2026): celda plot con
+`sin(x)+cos(x)` sobre `[-2π,2π]`, guardado/carga con diálogo nativo, undo/redo,
+evaluación incremental, watchdog y preferencias. CI: tests + Release con
+binarios precompilados (PackageCompiler).
 
 ## Fase 2 — Unidades, formato y documentos ricos
 

@@ -60,9 +60,13 @@ Mathesis/
 ## Estado actual
 
 - **Fase 0 completada** (30-oct-2026): scaffold + `2+2` de punta a punta, CI verde, licencia GPL-3.0.
-- **Fase 1 (MVP) en marcha** (31-oct-2026): worksheet multi-celda, variables/funciones
-  encadenadas (`eval_document`), traductor MathJSON completo (trig/log/raíces/enteros),
-  `plot_data` (uPlot: inspector + PlotCell/IntervalCell en la hoja), guardado/carga
-  (`doc_save`/`doc_open` con diálogo nativo), atajos. Pendiente: undo/redo,
-  evaluación incremental, watchdog, preferencias.
-- Seguir `Documentacion/04-plan/fases.md` para el detalle del checklist.
+- **Fase 1 (MVP) COMPLETADA** (31-oct-2026): worksheet multi-celda, variables/funciones
+  encadenadas, traductor MathJSON completo, gráficos (PlotCell/IntervalCell + inspector),
+  guardar/cargar con diálogo nativo, undo/redo, evaluación incremental (grafo + caché
+  en Julia), watchdog del sidecar (tokio::process, backoff, eventos), preferencias
+  (tema + dígitos en `doc.settings`), atajos. Tests: 126 Julia + 41 vitest.
+- **Binarios precompilados en CI**: engine = paquete Julia compilado con
+  PackageCompiler (`tools/build-engine-app.jl` → `src-tauri/engine-runtime`, empaquetado
+  como resource; entrypoint `julia_main()` renombrado a `mathesis-engine[.exe]`).
+  Workflow `.github/workflows/release.yml`: tag `v*` o manual → Linux/macOS/Windows.
+- Seguir `Documentacion/04-plan/fases.md` para el detalle del checklist (siguiente: Fase 2).
