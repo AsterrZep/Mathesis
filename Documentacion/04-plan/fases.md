@@ -41,7 +41,7 @@
 > ✅ **preferencias del documento** (tema claro/oscuro + dígitos significativos,
 > persistidas en `doc.settings`) · ✅ **binarios precompilados en CI**
 > (PackageCompiler app relocatable empaquetada como resource; workflow
-> Release multiplataforma)
+> binarios precompilados (PackageCompiler; workflow Release solo Linux))
 >
 > Tests: **126 Julia + 41 vitest** · clippy limpio · commits `8a4a511` +
 > `868a83c` + chunk 3
@@ -74,14 +74,18 @@
 - [x] Engine empaquetable: `PackageCompiler.create_app` → `src-tauri/engine-runtime`
       (relocatable, sin Julia instalada) + workload de precompilación
 - [x] Workflow **Release** (`.github/workflows/release.yml`): tag `v*` o manual →
-      Linux (AppImage/deb/rpm) · macOS arm64 (dmg) · Windows (NSIS/MSI), con cache
-      del sysimage y draft release con los instaladores
+      Linux (AppImage/deb/rpm), con cache del sysimage y draft release con los instaladores
+- [x] **🚀 Primera release publicada: `v0.1.0`** (31-oct-2026, solo Linux por decisión
+      del usuario) → https://github.com/AsterrZep/Mathesis/releases/tag/v0.1.0
+      · Assets: `.deb` (Debian/Ubuntu) + `.rpm` · 390 MB (runtime PackageCompiler completo —
+      optimizar en Fase 4) · AppImage pendiente: `linuxdeploy` falla en el runner
+      (fallback a deb/rpm activo; debug con `--verbose`)
 
 **Criterio de salida:** documento con 10 fórmulas encadenadas + gráfico 2D de
 `sin(x)`, guardable y reabrible. ✅ **cumplido** (31-oct-2026): celda plot con
 `sin(x)+cos(x)` sobre `[-2π,2π]`, guardado/carga con diálogo nativo, undo/redo,
-evaluación incremental, watchdog y preferencias. CI: tests + Release con
-binarios precompilados (PackageCompiler).
+evaluación incremental, watchdog y preferencias. CI: tests + **release `v0.1.0`
+publicada** (solo Linux: `.deb` + `.rpm`, PackageCompiler).
 
 ## Fase 2 — Unidades, formato y documentos ricos
 
