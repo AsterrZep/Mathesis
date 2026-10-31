@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Mathesis engine — wrapper dev del sidecar Julia.
+# FASE 0: ejecuta el motor desde el código fuente con la Julia del sistema.
+# FASE 4 (release): será reemplazado por un binario relocatable generado con
+# PackageCompiler.create_app (sin dependencia de Julia instalada).
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Tauri COPIA externalBin a target/debug/ durante el build, así que el wrapper
+# puede vivir en src-tauri/binaries/ O en src-tauri/target/debug/. Por eso se
+# sube por los directorios hasta encontrar la raíz del repo (donde vive engine/).
+ROOT=""
+DIR="$SCRIPT_DIR"
+while [ "$DIR" != "/" ]; do
+  if [ -f "$DIR/engine/src/MathesisEngine.jl" ]; then
+    ROOT="$DIR"
+    break
+  fi
+  DIR="$(dirname "$DIR")"
+done
+if [ -z "$ROOT" ]; then
+  echo "[mathesis-engine] ERROR: no se encontró engine/src/MathesisEngine.jl subiendo desde $SCRIPT_DIR" >&2
+  exit 1
+fi
+
+# Resolver julia: PATH primero, luego juliaup (la GUI no hereda siempre el PATH del shell)
+JULIA_BIN="$(command -v julia || true)"
+if [ -z "$JULIA_BIN" ] && [ -x "$HOME/.juliaup/bin/julia" ]; then
+  JULIA_BIN="$HOME/.juliaup/bin/julia"
+fi
+if [ -z "$JULIA_BIN" ]; then
+  echo "[mathesis-engine] ERROR: julia no encontrada (instala con juliaup)" >&2
+  exit 1
+fi
+
+exec "$JULIA_BIN" --project="$ROOT/engine" --startup-file=no "$ROOT/engine/src/MathesisEngine.jl"

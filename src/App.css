@@ -1,0 +1,185 @@
+/* App.css — worksheet de Mathesis (Fase 0) */
+
+:root {
+  --bg: #14161c;
+  --bg-cell: #1c1f28;
+  --border: #2c3140;
+  --fg: #e8eaf2;
+  --fg-dim: #9aa1b5;
+  --accent: #6ea8fe;
+  --ok: #4ade80;
+  --err: #f87171;
+  --warn: #facc15;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ── Topbar ─────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-cell);
+}
+
+.brand {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: linear-gradient(90deg, var(--accent), #a78bfa);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.chip {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--fg-dim);
+}
+.chip.ok {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 40%, transparent);
+}
+.chip.error {
+  color: var(--err);
+  border-color: color-mix(in srgb, var(--err) 40%, transparent);
+}
+
+/* ── Worksheet ──────────────────────────── */
+.worksheet {
+  flex: 1;
+  overflow: auto;
+  padding: 28px;
+}
+
+.cell {
+  background: var(--bg-cell);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  max-width: 900px;
+}
+
+.cell-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-dim);
+  margin-bottom: 10px;
+}
+
+.cell-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.mathfield-host {
+  flex: 1;
+  min-width: 280px;
+}
+
+/* MathLive en tema oscuro */
+mf.mf,
+.mathfield-host math-field {
+  display: block;
+  font-size: 28px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #12141a;
+  border: 1px solid transparent;
+  color: var(--fg);
+
+  /* MathLive pinta el argumento activo (p.ej. dentro de paréntesis) con
+     --selection-background-color. Su default es un pastel hsl(…, 70%, 85%)
+     casi blanco que tapa el texto en tema oscuro → lo sustituimos por un
+     acento translúcido (mejora registrada en 04-plan/fases.md). */
+  --selection-background-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  --selection-color: var(--fg);
+  --caret-color: var(--accent);
+  /* Culpable real del blanco: grupo bajo el cursor dentro de paréntesis */
+  --contains-highlight-background-color: color-mix(
+    in srgb,
+    var(--accent) 30%,
+    transparent
+  );
+}
+
+.mathfield-host math-field:focus-within {
+  border-color: var(--accent);
+}
+
+.eq {
+  font-size: 28px;
+  color: var(--fg-dim);
+}
+
+.result {
+  font-size: 32px;
+  font-variant-numeric: tabular-nums;
+  min-width: 120px;
+  text-align: right;
+  transition: opacity 0.15s;
+}
+.result.busy {
+  opacity: 0.45;
+}
+.result .unit {
+  font-size: 18px;
+  color: var(--fg-dim);
+  margin-left: 6px;
+}
+.result .err {
+  font-size: 15px;
+  color: var(--err);
+  font-weight: 600;
+}
+
+/* ── Status bar ─────────────────────────── */
+.statusbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-cell);
+  color: var(--fg-dim);
+  font-size: 12px;
+}
+.statusbar .hint {
+  color: var(--accent);
+}

@@ -1,0 +1,147 @@
+# Protocolo IPC: Rust (Tauri) ⇄ Julia (sidecar)
+
+> JSON-RPC 2.0 sobre stdio, formato NDJSON (un objeto JSON por línea, `\n`).
+
+## Por qué JSON-RPC sobre stdio
+
+- **Cero dependencias**: no abre puertos, no necesita red (seguro por defecto)
+- **Testable**: `echo '{"jsonrpc":"2.0","id":1,"method":"ping"}' | ./mathesis-engine`
+- **Soporte oficial**: `tauri-plugin-shell` lee stdout del sidecar línea a línea
+- **Suficiente**: el volumen de datos (arrays de plot) cabe en JSON; si un día
+  no cabiera, se añade socket local solo para datos (ADR-008)
+
+## Mensajes de ejemplo
+
+### Handshake
+
+```json
+→ {"jsonrpc":"2.0","id":1,"method":"hello","params":{"protocolVersion":1,"appVersion":"0.1.0"}}
+← {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":1,"engineVersion":"0.1.0","julia":"1.12.6"}}
+```
+
+### Evaluar una celda
+
+```json
+→ {"jsonrpc":"2.0","id":2,"method":"eval_cell","params":{
+     "cellId":"c7",
+     "ast":["Sqrt",["Add",["Power","x",2],1]],
+     "env":{"xi":{"value":0.99,"unit":"1"},
+            "f":{"def":["Asin",["Power","Symbol","x",2]],"args":["x"]}},
+     "x":{"value":0.5,"unit":"m"}}}
+← {"jsonrpc":"2.0","id":2,"result":{
+     "status":"ok",
+     "value":"1.118033988749895",
+     "unit":"1",
+     "latex":"\\sqrt{1.25}",
+     "type":"real"}}
+```
+
+### Error matemático (no es error RPC)
+
+```json
+← {"jsonrpc":"2.0","id":2,"result":{
+     "status":"error",
+     "error":{"code":"DIV_ZERO","message":"División entre cero","cellId":"c9"}}}
+```
+
+### Evaluar documento completo (al cargar)
+
+```json
+→ {"jsonrpc":"2.0","id":3,"method":"eval_document","params":{"doc":{...documento completo...}}}
+← {"jsonrpc":"2.0","id":3,"result":{"cells":[
+      {"cellId":"c1","status":"ok","value":"0.99","unit":"1"},
+      {"cellId":"c2","status":"ok","value":"…","unit":"m"}
+   ]}}
+```
+
+### Solicitar datos de un gráfico
+
+```json
+→ {"jsonrpc":"2.0","id":4,"method":"plot_data","params":{
+     "cellId":"p1",
+     "x":{"var":"x","from":-1,"to":1,"steps":500},
+     "functions":[
+       {"id":"f1","ast":["Add",1,["Apply",{"ref":"f"},"x"]],"color":"#FF0043"},
+       {"id":"f2","ast":["Subtract",1,["Apply",{"ref":"f"},"x"]],"color":"#0000FF"}]
+   }}
+← {"jsonrpc":"2.0","id":4,"result":{
+     "status":"ok",
+     "x":[-1.0,-0.996,...],
+     "series":[{"id":"f1","y":[0.15,...],"finite":true},
+               {"id":"f2","y":[...],"finite":true}]}}
+```
+
+### Exportar (LaTeX / imagen / SVG)
+
+```json
+→ {"jsonrpc":"2.0","id":5,"method":"export","params":{
+     "kind":"latex","doc":{...}}}
+← {"jsonrpc":"2.0","id":5,"result":{"status":"ok","content":"\\begin{align}..."}}
+
+→ {"jsonrpc":"2.0","id":6,"method":"export","params":{
+     "kind":"figure","cellId":"p1","format":"svg","theme":"dark"}}
+← {"jsonrpc":"2.0","id":6,"result":{"status":"ok","mime":"image/svg+xml","data":"<svg…>"}}}
+```
+(CairoMakie renderiza el figure → Rust lo escribe a disco o lo pasa al frontend)
+
+### Cancelar evaluación en curso
+
+```json
+→ {"jsonrpc":"2.0","id":7,"method":"cancel","params":{"id":4}}
+```
+
+### Notificaciones del engine (sin `id`)
+
+```json
+← {"jsonrpc":"2.0","method":"progress","params":{"cellId":"p1","frac":0.4}}
+← {"jsonrpc":"2.0","method":"ready","params":{}}
+← {"jsonrpc":"2.0","method":"log","params":{"level":"info","msg":"..."}}
+```
+
+## Métodos del motor (catálogo)
+
+| Método | Params | Result |
+|---|---|---|
+| `hello` | protocolVersion, appVersion | engineVersion, julia |
+| `ping` | — | pong |
+| `eval_cell` | cellId, ast, env | status, value, unit, latex, type |
+| `eval_document` | doc | cells[] (resultados por celda) |
+| `eval_incremental` | changedCellIds, doc | cells[] (solo re-evaluados) |
+| `plot_data` | cellId, x-range, functions[] | x[], series[] |
+| `export` | kind(latex\|figure\|mathjax), doc/cellId, format, theme | mime, data |
+| `simplify` | ast | latex simplificado (para botón "simplificar") |
+| `cancel` | id | ack |
+| `shutdown` | — | ok (termina el proceso limpio) |
+
+## Manejo de errores RPC
+
+| Código | Significado |
+|---|---|
+| `-32700` | JSON inválido |
+| `-32600` | Petición malformada |
+| `-32601` | Método desconocido |
+| `-32602` | Params inválidos |
+| `-32000` | Error interno del engine (crash capturado) |
+| `-32001` | Timeout de evaluación (soft-limit configurable) |
+
+Los **errores matemáticos** (división por cero, raíz de negativo, unidad
+incompatible) **NO** son errores RPC: van en `result.status = "error"` con un
+código de dominio (`DIV_ZERO`, `UNIT_MISMATCH`…), para que la UI los pinte
+como "error en la celda", no como fallo del sistema.
+
+## Ciclo de vida y watchdog (lado Rust)
+
+1. Al abrir la app: `spawn(sidecar)` → espera `method:"ready"` (timeout 30 s)
+2. Heartbeat: `ping` cada 30 s; si no responde en 10 s → marcar muerto
+3. Si el sidecar muere:
+   - Reiniciarlo (máx. 3 intentos con backoff 1s/2s/4s)
+   - Re-enviar `eval_document` con el estado actual
+   - Si falla 3 veces → diálogo "el motor matemático no responde"
+4. Al cerrar la app: `shutdown` → SIGTERM → kill después de 2 s
+
+## Límites de evaluación (soft)
+
+- Cálculo numérico simple: sin límite práctico
+- Simbólico (simplify/solve): timeout 30 s con `cancel` disponible
+- Plot: máx. 100k puntos por función (advertencia UI si pide más)
+- Documento: máx. 5000 celdas (rendimiento)
