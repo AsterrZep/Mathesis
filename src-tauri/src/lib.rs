@@ -197,6 +197,41 @@ async fn doc_import(app: tauri::AppHandle) -> Result<Option<Value>, String> {
     })))
 }
 
+/// Guarda un artefacto generado en el FRONTEND (PNG/SVG de figuras, Fase 2)
+/// con diálogo "Guardar como" nativo. `b64=true` → content es base64 (PNG).
+/// Frontend: invoke("save_artifact", { filename, ext, content, b64 })
+#[tauri::command]
+async fn save_artifact(
+    app: tauri::AppHandle,
+    filename: String,
+    ext: String,
+    content: String,
+    b64: bool,
+) -> Result<Option<String>, String> {
+    use base64::Engine as _;
+    let bytes: Vec<u8> = if b64 {
+        base64::engine::general_purpose::STANDARD
+            .decode(content.as_bytes())
+            .map_err(|e| format!("base64 inválido: {e}"))?
+    } else {
+        content.into_bytes()
+    };
+
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    app.dialog()
+        .file()
+        .add_filter(&format!("Gráfico {ext}"), &[ext.as_str()])
+        .set_file_name(&filename)
+        .save_file(move |p| {
+            let _ = tx.send(p.map(|f| f.to_string()));
+        });
+    let Some(target) = rx.await.ok().flatten() else {
+        return Ok(None); // cancelado
+    };
+    std::fs::write(&target, &bytes).map_err(|e| format!("No se pudo escribir: {e}"))?;
+    Ok(Some(target))
+}
+
 /// Estado del sidecar: { ready, spawnError }
 #[tauri::command]
 fn engine_status(engine: tauri::State<'_, engine::Engine>) -> Value {
@@ -238,6 +273,7 @@ pub fn run() {
             doc_open,
             doc_import,
             doc_export,
+            save_artifact,
             engine_status,
             ping_engine
         ])

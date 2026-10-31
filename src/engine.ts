@@ -208,6 +208,31 @@ export async function docImport(): Promise<DocImportResult | null> {
 }
 
 /**
+ * Guarda un artefacto generado en el frontend (PNG/SVG de figuras) con el
+ * diálogo nativo. `b64` → content es base64 sin prefijo (PNG); sin b64 → texto.
+ */
+export async function saveArtifact(
+  filename: string,
+  ext: string,
+  content: string,
+  b64: boolean,
+): Promise<string | null> {
+  if (isTauri) {
+    return await invoke<string | null>("save_artifact", { filename, ext, content, b64 });
+  }
+  // Navegador dev: descarga directa
+  const url = b64
+    ? `data:application/octet-stream;base64,${content}`
+    : URL.createObjectURL(new Blob([content], { type: `image/${ext}` }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  if (!b64) URL.revokeObjectURL(url);
+  return filename;
+}
+
+/**
  * Exporta el documento (Fase 2: `latex` → .tex con resultados evaluados por
  * Julia). El doc debe llevar las celdas CON `ast` (parse canonical:false) y
  * `latex`. Guarda con diálogo nativo y devuelve la ruta (null = cancelado).

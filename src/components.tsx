@@ -14,8 +14,10 @@ import {
   evalCell,
   parseCellAst,
   plotData,
+  saveArtifact,
 } from "./engine";
 import { assetUrl } from "./imageAsset";
+import { chartToSVG, svgToPngB64 } from "./exportChart";
 import { Plot2D } from "./Plot2D";
 
 // ── Topbar (brand ∫ + doc chip + pill engine + acciones) ─────────────────
@@ -453,6 +455,33 @@ function PlotControls({ cell }: { cell: Cell }) {
     }
   };
 
+  /**
+   * Exportar la FIGURA (Fase 2): SVG generado desde los datos y PNG
+   * rasterizado del mismo SVG a 2× — sin Makie en el engine (rendimiento).
+   */
+  const saveFig = async (fmt: "svg" | "png") => {
+    if (!data) return;
+    const W = 640;
+    const H = 400;
+    const svg = chartToSVG({
+      x: data.x,
+      series: data.series,
+      width: W,
+      height: H,
+      subtitle: `x ∈ [${data.range[0]}, ${data.range[1]}] · ${data.x.length} pts`,
+    });
+    try {
+      if (fmt === "svg") {
+        await saveArtifact("grafico.svg", "svg", svg, false);
+      } else {
+        const b64 = await svgToPngB64(svg, W, H, 2);
+        await saveArtifact("grafico.png", "png", b64, true);
+      }
+    } catch (e) {
+      window.alert(`No se pudo exportar: ${e instanceof Error ? e.message : e}`);
+    }
+  };
+
   // Debounce 500: cambiar expresión/rango/definitions re-muestrea
   useEffect(() => {
     const t = window.setTimeout(() => void doPlot(), 500);
@@ -497,6 +526,14 @@ function PlotControls({ cell }: { cell: Cell }) {
             {data.nonFinite > 0 && (
               <span className="plot-gaps">● {data.nonFinite} fuera de dominio (gap)</span>
             )}
+            <span className="plot-export">
+              <button className="btn btn-mini" title="Exportar figura en SVG" onClick={() => void saveFig("svg")}>
+                ⤓ SVG
+              </button>
+              <button className="btn btn-mini" title="Exportar figura en PNG (2×)" onClick={() => void saveFig("png")}>
+                ⤓ PNG
+              </button>
+            </span>
             <span className="plot-hint">arrastra = zoom · doble clic = reset</span>
           </div>
         </>

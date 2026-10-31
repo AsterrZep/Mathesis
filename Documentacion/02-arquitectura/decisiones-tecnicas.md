@@ -81,6 +81,18 @@ exportación de máxima calidad, NO para la vista interactiva (ese rol es de
 uPlot/WebGL en el frontend, que es más ligero e interactivo sin Julia viva).
 Es el mejor de los dos mundos: calidad de publicación + interactividad nativa.
 
+> **⚡ Revisión (31-oct-2026, Fase 2):** el punto 2 queda **deferido**.
+> El usuario priorizó el **rendimiento en equipos de pocos recursos** (tras el
+> feedback de la laptop con la v0.1.0): empaquetar CairoMakie añadiría
+> ≈200-400 MB al sysimage, subiría arranque/RSS y complicaría el CI, para
+> dibujar figuras 2D que ya son solo datos x/y. **Implementado en su lugar:**
+> exportación de figuras **PNG/SVG desde el frontend** (`src/exportChart.ts` —
+> SVG de polilíneas+ejes+rejilla+leyenda generado de los datos de `plot_data`,
+> PNG = rasterizado 2× del mismo SVG; un solo renderer = coherente con lo que
+> se ve). CairoMakie queda pendiente de **medición en Fase 4** y solo si se
+> necesita export **headless** (servidor/CLI) o el render completo del
+> documento. El punto 1 (uPlot interactivo) sigue tal cual.
+
 ---
 
 ## ADR-004: Formato de documento JSON propio + importador `.mmt`

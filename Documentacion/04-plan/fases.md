@@ -98,10 +98,11 @@ publicada** (solo Linux: `.deb` + `.rpm`, PackageCompiler).
 > ✅ **Unidades de información** custom · ✅ **Export LaTeX** (botón Export) ·
 > ✅ **Celda de imagen** (dedup SHA-256 + WebP selectivo + GC) ·
 > ✅ **Importador `.mmt`** (parser XML en Rust, botón ⤒ Import) ·
-> ⬜ exports PNG/SVG · ⬜ ancho de texto · ⬜ i18n ·
+> ✅ **Export PNG/SVG de figuras** (renderer ligero en frontend; Makie deferido
+> a Fase 4 — revisión ADR-003) · ⬜ ancho de texto · ⬜ i18n ·
 > ✅ tema claro/oscuro (hecho en Fase 1)
 >
-> Tests: **175 Julia + 49 vitest + 4 cargo**
+> Tests: **175 Julia + 57 vitest + 4 cargo**
 
 - [x] **Unidades** (Unitful): parse de `5 m` (hoja `"m"` → cantidad), conversión
       `1 km → 1000 m` (`["To",…]`), errores de incompatibilidad (`UNIT_MISMATCH`),
@@ -127,7 +128,12 @@ publicada** (solo Linux: `.deb` + `.rpm`, PackageCompiler).
 - [x] Export **LaTeX** del documento (vía engine — `export` kind=latex + comando
       `doc_export` con diálogo nativo, resultados de Julia en cada fórmula,
       texto escapado; botón Export del topbar activo)
-- [ ] Export **PNG/SVG** de figuras (CairoMakie)
+- [x] Export **PNG/SVG** de figuras — **vía frontend** (`exportChart.ts`): SVG
+      desde los datos de `plot_data` (rejilla/ticks bonitos, gaps como cortes,
+      leyenda) + PNG rasterizado 2×, guardado con diálogo nativo
+      (`save_artifact`). **CairoMakie DEFERIDO** a Fase 4 por coste de
+      sysimage/arranque (revisión ADR-003 — decisión de rendimiento; ver
+      nota en decisiones-tecnicas.md)
 - [ ] Export imagen del documento completo (render de celdas → canvas → PNG)
 - [ ] Preferencias del documento (dígitos ✅ en Fase 1 · ancho texto pendiente)
 - [ ] i18n: ES + EN (i18next)

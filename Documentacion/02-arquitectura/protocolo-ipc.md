@@ -202,6 +202,7 @@ No pasan por JSON-RPC: son `invoke` directos de Tauri sobre el mismo estado.
 | `doc_open` | — | {path, doc} \| null | diálogo nativo; null al cancelar |
 | `doc_import` | — | {path, doc, warnings} \| null | diálogo `.mmt` → parser XML (`mmt.rs`); no escribe disco |
 | `doc_export` | kind, path?, doc | path \| null | vía RPC `export` del engine + diálogo "Guardar como" |
+| `save_artifact` | filename, ext, content, b64 | path \| null | artefacto generado en el FRONTEND (figuras PNG/SVG) + diálogo nativo |
 | `engine_status` | — | {ready, spawnError} | estado del sidecar |
 
 El formato del documento (`doc`) es el JSON propio v1:
